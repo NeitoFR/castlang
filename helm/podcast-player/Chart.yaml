@@ -1,0 +1,6 @@
+apiVersion: v2
+name: podcast-player
+description: A Helm chart for Japanese Podcast Player
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

@@ -1,0 +1,10 @@
+# Common patterns
+.DS_Store
+.env
+.env.*
+!.env.example
+*.log
+.idea/
+.vscode/
+*.swp
+*.swo 
