@@ -1,16 +1,23 @@
 ---
-
+import Layout from '../layouts/Layout.astro';
+import AudioList from '../components/AudioList.astro';
+import DownloadForm from '../components/DownloadForm.astro';
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Layout title="CastLang - Audio Manager">
+	<main class="container mx-auto px-4 py-8">
+		<h1 class="text-4xl font-bold text-center mb-8">CastLang Audio Manager</h1>
+		
+		<div class="grid gap-8">
+			<section class="bg-white rounded-lg shadow-md p-6">
+				<h2 class="text-2xl font-semibold mb-4">Download New Audio</h2>
+				<DownloadForm />
+			</section>
+
+			<section class="bg-white rounded-lg shadow-md p-6">
+				<h2 class="text-2xl font-semibold mb-4">Available Audio Files</h2>
+				<AudioList />
+			</section>
+		</div>
+	</main>
+</Layout>
