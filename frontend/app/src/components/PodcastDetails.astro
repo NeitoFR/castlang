@@ -1,0 +1,300 @@
+---
+interface Props {
+  initialFilename?: string;
+}
+
+const { initialFilename } = Astro.props;
+---
+
+<div class="h-full flex flex-col">
+  <!-- Empty State -->
+  <div id="emptyState" class="flex-1 flex items-center justify-center bg-gray-50">
+    <div class="text-center p-8">
+      <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+      </svg>
+      <h3 class="text-lg font-medium text-gray-900 mb-2">No Podcast Selected</h3>
+      <p class="text-gray-500">Select a podcast from the library to start listening</p>
+    </div>
+  </div>
+
+  <!-- Podcast Details -->
+  <div id="podcastDetails" class="flex-1 flex flex-col bg-white hidden">
+    <!-- Header -->
+    <div class="flex-shrink-0 p-6 border-b border-gray-200">
+      <div class="flex items-start justify-between">
+        <div class="flex-1 min-w-0">
+          <h2 id="podcastTitle" class="text-2xl font-bold text-gray-900 mb-1"></h2>
+          <p id="podcastFilename" class="text-sm text-gray-500"></p>
+        </div>
+        <div class="ml-4 flex-shrink-0">
+          <a
+            id="downloadLink"
+            href="#"
+            download
+            class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audio Player -->
+    <div class="flex-1 p-6">
+      <div class="max-w-3xl mx-auto">
+        <!-- Audio element -->
+        <audio 
+          id="audioPlayer"
+          class="w-full"
+          controls
+          preload="metadata"
+        >
+          Your browser does not support the audio element.
+        </audio>
+        
+        <!-- Custom progress bar -->
+        <div class="mt-4">
+          <div class="flex items-center justify-between text-sm text-gray-500 mb-2">
+            <span id="currentTime">0:00</span>
+            <span id="duration">0:00</span>
+          </div>
+          <div class="relative">
+            <div id="progressBar" class="w-full bg-gray-200 rounded-full h-2 cursor-pointer">
+              <div id="progressFill" class="bg-indigo-600 h-2 rounded-full transition-all duration-150" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Custom controls -->
+        <div class="flex items-center justify-center space-x-6 mt-6">
+          <button id="playPauseBtn" class="p-3 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+            <svg id="playIcon" class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+            </svg>
+            <svg id="pauseIcon" class="w-8 h-8 hidden" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </button>
+          
+          <button id="muteBtn" class="p-2 rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+            <svg id="volumeIcon" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.784L4.5 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.5l3.883-3.784A1 1 0 019.383 3.076zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+            <svg id="muteIcon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.784L4.5 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.5l3.883-3.784A1 1 0 019.383 3.076z" clip-rule="evenodd" />
+            </svg>
+          </button>
+          
+          <div class="flex items-center space-x-2">
+            <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.784L4.5 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.5l3.883-3.784A1 1 0 019.383 3.076zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+            <input 
+              id="volumeSlider" 
+              type="range" 
+              min="0" 
+              max="100" 
+              value="100" 
+              class="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            >
+            <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.784L4.5 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.5l3.883-3.784A1 1 0 019.383 3.076zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const emptyState = document.getElementById('emptyState');
+  const podcastDetails = document.getElementById('podcastDetails');
+  const podcastTitle = document.getElementById('podcastTitle');
+  const podcastFilename = document.getElementById('podcastFilename');
+  const downloadLink = document.getElementById('downloadLink') as HTMLAnchorElement;
+  const audioPlayer = document.getElementById('audioPlayer') as HTMLAudioElement;
+  const playPauseBtn = document.getElementById('playPauseBtn');
+  const playIcon = document.getElementById('playIcon');
+  const pauseIcon = document.getElementById('pauseIcon');
+  const muteBtn = document.getElementById('muteBtn');
+  const volumeIcon = document.getElementById('volumeIcon');
+  const muteIcon = document.getElementById('muteIcon');
+  const volumeSlider = document.getElementById('volumeSlider') as HTMLInputElement;
+  const progressBar = document.getElementById('progressBar');
+  const progressFill = document.getElementById('progressFill');
+  const currentTime = document.getElementById('currentTime');
+  const duration = document.getElementById('duration');
+  
+  let currentPodcast: string | null = null;
+  
+  // Format time helper
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+  
+  // Update progress
+  const updateProgress = () => {
+    if (audioPlayer.duration) {
+      const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+      if (progressFill) {
+        progressFill.style.width = `${progress}%`;
+      }
+      if (currentTime) {
+        currentTime.textContent = formatTime(audioPlayer.currentTime);
+      }
+    }
+  };
+  
+  // Load podcast
+  const loadPodcast = (filename: string) => {
+    if (!filename) return;
+    
+    currentPodcast = filename;
+    const title = filename.replace('.mp3', '').replace(/_/g, ' ');
+    
+    // Update UI
+    if (podcastTitle) podcastTitle.textContent = title;
+    if (podcastFilename) podcastFilename.textContent = filename;
+    if (downloadLink) downloadLink.href = `http://localhost:8000/download/${filename}`;
+    
+    // Update audio source
+    audioPlayer.src = `http://localhost:8000/stream/${filename}`;
+    
+    // Show details, hide empty state
+    if (emptyState) emptyState.classList.add('hidden');
+    if (podcastDetails) podcastDetails.classList.remove('hidden');
+    
+    // Reset player state
+    audioPlayer.currentTime = 0;
+    if (progressFill) progressFill.style.width = '0%';
+    if (currentTime) currentTime.textContent = '0:00';
+    if (duration) duration.textContent = '0:00';
+    
+    // Load audio
+    audioPlayer.load();
+  };
+  
+  // Event listeners
+  if (audioPlayer) {
+    audioPlayer.addEventListener('loadedmetadata', () => {
+      if (duration) {
+        duration.textContent = formatTime(audioPlayer.duration);
+      }
+    });
+    
+    audioPlayer.addEventListener('timeupdate', updateProgress);
+    
+    audioPlayer.addEventListener('play', () => {
+      if (playIcon) playIcon.classList.add('hidden');
+      if (pauseIcon) pauseIcon.classList.remove('hidden');
+    });
+    
+    audioPlayer.addEventListener('pause', () => {
+      if (playIcon) playIcon.classList.remove('hidden');
+      if (pauseIcon) pauseIcon.classList.add('hidden');
+    });
+    
+    audioPlayer.addEventListener('ended', () => {
+      if (playIcon) playIcon.classList.remove('hidden');
+      if (pauseIcon) pauseIcon.classList.add('hidden');
+    });
+  }
+  
+  if (playPauseBtn) {
+    playPauseBtn.addEventListener('click', () => {
+      if (audioPlayer.paused) {
+        audioPlayer.play();
+      } else {
+        audioPlayer.pause();
+      }
+    });
+  }
+  
+  if (muteBtn) {
+    muteBtn.addEventListener('click', () => {
+      audioPlayer.muted = !audioPlayer.muted;
+      if (audioPlayer.muted) {
+        if (volumeIcon) volumeIcon.classList.add('hidden');
+        if (muteIcon) muteIcon.classList.remove('hidden');
+      } else {
+        if (volumeIcon) volumeIcon.classList.remove('hidden');
+        if (muteIcon) muteIcon.classList.add('hidden');
+      }
+    });
+  }
+  
+  if (volumeSlider) {
+    volumeSlider.addEventListener('input', (e) => {
+      const target = e.target as HTMLInputElement;
+      audioPlayer.volume = parseInt(target.value) / 100;
+    });
+  }
+  
+  if (progressBar) {
+    progressBar.addEventListener('click', (e) => {
+      const rect = progressBar.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const width = rect.width;
+      const clickTime = (clickX / width) * audioPlayer.duration;
+      audioPlayer.currentTime = clickTime;
+    });
+  }
+  
+  // Listen for podcast selection
+  window.addEventListener('podcastSelected', ((e: CustomEvent) => {
+    loadPodcast(e.detail.filename);
+  }) as EventListener);
+  
+  // Initialize with initial podcast if provided
+  if (currentPodcast) {
+    loadPodcast(currentPodcast);
+  }
+</script>
+
+<style>
+  /* Custom volume slider styling */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 9999px;
+    outline: none;
+  }
+  
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #4f46e5;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.15s ease-in-out;
+  }
+  
+  input[type="range"]::-webkit-slider-thumb:hover {
+    background: #4338ca;
+  }
+  
+  input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #4f46e5;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    transition: background 0.15s ease-in-out;
+  }
+  
+  input[type="range"]::-moz-range-thumb:hover {
+    background: #4338ca;
+  }
+</style> 
