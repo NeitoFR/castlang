@@ -1,7 +1,5 @@
 # Download from yt-dlp
 
-
-
 # Japanese Podcast Player
 
 A web application for listening to Japanese podcasts with multi-language subtitles (Japanese, English, and French).
@@ -28,6 +26,7 @@ A web application for listening to Japanese podcasts with multi-language subtitl
 - Python
 - yt-dlp for media downloading
 - Gladia.io for transcription
+- PostgreSQL (for data persistence)
 
 ### Infrastructure
 
