@@ -16,17 +16,42 @@
       id="downloadBtn"
       class="w-full px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      <svg id="downloadIcon" class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8l-8 8-8-8" />
+      <svg
+        id="downloadIcon"
+        class="w-4 h-4 inline mr-2"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 4v16m8-8l-8 8-8-8"></path>
       </svg>
-      <svg id="loadingIcon" class="w-4 h-4 inline mr-2 animate-spin hidden" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      <svg
+        id="loadingIcon"
+        class="w-4 h-4 mr-2 animate-spin hidden"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"></circle>
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        ></path>
       </svg>
       <span id="downloadText">Add Podcast</span>
     </button>
   </form>
-  
+
   <!-- Status message -->
   <div id="statusMessage" class="hidden mt-2 p-2 rounded text-sm"></div>
 </div>
@@ -34,11 +59,43 @@
 <!-- Podcast List Section -->
 <div class="flex-1 overflow-y-auto">
   <div class="p-4">
-    <h2 class="text-lg font-semibold text-gray-900 mb-4">Podcast Library</h2>
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold text-gray-900">Podcast Library</h2>
+      <button
+        id="refreshBtn"
+        class="text-sm text-indigo-600 hover:text-indigo-800 flex items-center"
+        title="Refresh status of all podcasts"
+      >
+        <svg
+          class="w-4 h-4 mr-1"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+          ></path>
+        </svg>
+        Refresh
+      </button>
+    </div>
     <div id="podcastList" class="space-y-3">
       <div class="text-center text-gray-500 py-8">
-        <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+        <svg
+          class="w-12 h-12 mx-auto mb-4 text-gray-300"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+          ></path>
         </svg>
         <p>Loading podcasts...</p>
       </div>
@@ -47,84 +104,229 @@
 </div>
 
 <script>
-  const podcastList = document.getElementById('podcastList');
-  const form = document.getElementById('downloadForm');
-  const downloadBtn = document.getElementById('downloadBtn') as HTMLButtonElement;
-  const downloadIcon = document.getElementById('downloadIcon');
-  const loadingIcon = document.getElementById('loadingIcon');
-  const downloadText = document.getElementById('downloadText');
-  const statusMessage = document.getElementById('statusMessage');
-  
+  const podcastList = document.getElementById("podcastList");
+  const form = document.getElementById("downloadForm");
+  const downloadBtn = document.getElementById(
+    "downloadBtn"
+  ) as HTMLButtonElement;
+  const downloadIcon = document.getElementById("downloadIcon");
+  const loadingIcon = document.getElementById("loadingIcon");
+  const downloadText = document.getElementById("downloadText");
+  const statusMessage = document.getElementById("statusMessage");
+  const refreshBtn = document.getElementById("refreshBtn");
+
   let selectedPodcast: string | null = null;
-  
-  function showStatus(message: string, type: 'success' | 'error' | 'info') {
+
+  // API configuration
+  const API_BASE_URL =
+    import.meta.env.PUBLIC_API_URL || "http://localhost:8000/api/v1";
+
+  function showStatus(message: string, type: "success" | "error" | "info") {
     if (!statusMessage) return;
-    
+
     statusMessage.className = `mt-2 p-2 rounded text-sm ${
-      type === 'success' ? 'bg-green-100 text-green-800' :
-      type === 'error' ? 'bg-red-100 text-red-800' :
-      'bg-blue-100 text-blue-800'
+      type === "success"
+        ? "bg-green-100 text-green-800"
+        : type === "error"
+          ? "bg-red-100 text-red-800"
+          : "bg-blue-100 text-blue-800"
     }`;
     statusMessage.textContent = message;
-    statusMessage.classList.remove('hidden');
-    
-    if (type === 'success') {
+    statusMessage.classList.remove("hidden");
+
+    if (type === "success") {
       setTimeout(() => {
-        statusMessage.classList.add('hidden');
+        statusMessage.classList.add("hidden");
       }, 3000);
     }
   }
-  
+
   function setLoading(loading: boolean) {
     if (!downloadBtn || !downloadIcon || !loadingIcon || !downloadText) return;
-    
+
     downloadBtn.disabled = loading;
-    
+
     if (loading) {
-      downloadIcon.classList.add('hidden');
-      loadingIcon.classList.remove('hidden');
-      downloadText.textContent = 'Adding...';
+      downloadIcon.classList.add("hidden");
+      loadingIcon.classList.remove("hidden");
+      downloadText.textContent = "Adding...";
     } else {
-      downloadIcon.classList.remove('hidden');
-      loadingIcon.classList.add('hidden');
-      downloadText.textContent = 'Add Podcast';
+      downloadIcon.classList.remove("hidden");
+      loadingIcon.classList.add("hidden");
+      downloadText.textContent = "Add Podcast";
     }
   }
-  
+
   function selectPodcast(filename: string) {
     // Remove previous selection
-    document.querySelectorAll('.podcast-item').forEach(item => {
-      item.classList.remove('bg-indigo-50', 'border-indigo-200');
-      item.classList.add('border-gray-200');
+    document.querySelectorAll(".podcast-item").forEach((item) => {
+      item.classList.remove("bg-indigo-50", "border-indigo-200");
+      item.classList.add("border-gray-200");
     });
-    
+
     // Select new item
-    const selectedItem = document.querySelector(`[data-filename="${filename}"]`);
+    const selectedItem = document.querySelector(
+      `[data-filename="${filename}"]`
+    );
     if (selectedItem) {
-      selectedItem.classList.add('bg-indigo-50', 'border-indigo-200');
-      selectedItem.classList.remove('border-gray-200');
+      selectedItem.classList.add("bg-indigo-50", "border-indigo-200");
+      selectedItem.classList.remove("border-gray-200");
     }
-    
+
     selectedPodcast = filename;
-    
+
     // Dispatch custom event to update details panel
-    window.dispatchEvent(new CustomEvent('podcastSelected', { 
-      detail: { filename } 
-    }));
+    window.dispatchEvent(
+      new CustomEvent("podcastSelected", {
+        detail: { filename },
+      })
+    );
   }
-  
+
+  function formatDuration(seconds: number | null): string {
+    if (!seconds) return "Unknown";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  }
+
+  function formatFileSize(bytes: number | null): string {
+    if (!bytes) return "Unknown";
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
+  }
+
+  function getStatusBadge(status: string): string {
+    const statusConfig: Record<string, string> = {
+      downloaded: "bg-green-100 text-green-800",
+      not_downloaded: "bg-yellow-100 text-yellow-800",
+      downloading: "bg-blue-100 text-blue-800",
+      download_error: "bg-red-100 text-red-800",
+      extraction_error: "bg-red-100 text-red-800",
+      not_transcribed: "bg-gray-100 text-gray-800",
+      transcribing: "bg-blue-100 text-blue-800",
+      transcribed: "bg-purple-100 text-purple-800",
+      transcription_failed: "bg-red-100 text-red-800",
+    };
+    return statusConfig[status] || "bg-gray-100 text-gray-800";
+  }
+
+  function getStatusText(status: string): string {
+    const statusTexts: Record<string, string> = {
+      downloaded: "Downloaded",
+      not_downloaded: "Not Downloaded",
+      downloading: "Downloading...",
+      download_error: "Download Error",
+      extraction_error: "Extraction Error",
+      not_transcribed: "Not Transcribed",
+      transcribing: "Transcribing...",
+      transcribed: "Transcribed",
+      transcription_failed: "Transcription Failed",
+    };
+    return statusTexts[status] || status;
+  }
+
+  function isPodcastAvailable(downloadStatus: string): boolean {
+    return downloadStatus === "downloaded";
+  }
+
+  function canTranscribe(downloadStatus: string, transcriptionStatus: string): boolean {
+    return downloadStatus === "downloaded" && transcriptionStatus !== "transcribing";
+  }
+
+  function needsDownload(downloadStatus: string): boolean {
+    return downloadStatus === "not_downloaded" || downloadStatus === "download_error" || downloadStatus === "extraction_error";
+  }
+
+  function needsTranscription(downloadStatus: string, transcriptionStatus: string): boolean {
+    return downloadStatus === "downloaded" && (transcriptionStatus === "not_transcribed" || transcriptionStatus === "transcription_failed");
+  }
+
+  async function reDownloadPodcast(audioFileId: number, event: Event) {
+    event.stopPropagation();
+
+    const reDownloadBtn = event.target as HTMLButtonElement;
+    const originalText = reDownloadBtn.textContent || "";
+
+    try {
+      reDownloadBtn.disabled = true;
+      reDownloadBtn.textContent = "Re-downloading...";
+
+      const response = await fetch(
+        `${API_BASE_URL}/audio-files/${audioFileId}/re-download`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to re-download podcast");
+      }
+
+      showStatus("Podcast re-downloaded successfully", "success");
+
+      // Reload the podcast list to show updated status
+      await loadPodcasts();
+    } catch (error) {
+      console.error("Error re-downloading podcast:", error);
+      showStatus("Failed to re-download podcast", "error");
+    } finally {
+      reDownloadBtn.disabled = false;
+      reDownloadBtn.textContent = originalText;
+    }
+  }
+
+  async function reTranscribePodcast(audioFileId: number, event: Event) {
+    event.stopPropagation();
+
+    const reTranscribeBtn = event.target as HTMLButtonElement;
+    const originalText = reTranscribeBtn.textContent || "";
+
+    try {
+      reTranscribeBtn.disabled = true;
+      reTranscribeBtn.textContent = "Re-transcribing...";
+
+      const response = await fetch(
+        `${API_BASE_URL}/audio-files/${audioFileId}/transcribe`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to re-transcribe podcast");
+      }
+
+      showStatus("Podcast re-transcription started successfully", "success");
+
+      // Reload the podcast list to show updated status
+      await loadPodcasts();
+    } catch (error) {
+      console.error("Error re-transcribing podcast:", error);
+      showStatus("Failed to re-transcribe podcast", "error");
+    } finally {
+      reTranscribeBtn.disabled = false;
+      reTranscribeBtn.textContent = originalText;
+    }
+  }
+
   async function loadPodcasts() {
     if (!podcastList) return;
-    
+
     try {
-      const response = await fetch('http://localhost:8000/audio-files');
+      const response = await fetch(`${API_BASE_URL}/audio-files`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const audioFiles = await response.json();
-      
+
       if (audioFiles.length === 0) {
         podcastList.innerHTML = `
           <div class="text-center text-gray-500 py-8">
             <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
             </svg>
             <p>No podcasts yet</p>
             <p class="text-sm mt-1">Add a YouTube URL above to get started</p>
@@ -133,47 +335,117 @@
         return;
       }
 
-      podcastList.innerHTML = audioFiles.map((file: { filename: string; path: string }, index: number) => {
-        const title = file.filename.replace('.mp3', '').replace(/_/g, ' ');
-        const isFirst = index === 0;
-        
-        return `
+      podcastList.innerHTML = audioFiles
+        .map((file: any, index: number) => {
+          const title =
+            file.title || file.filename.replace(".mp3", "").replace(/_/g, " ");
+          const isFirst = index === 0;
+          const duration = formatDuration(file.duration_seconds);
+          const fileSize = formatFileSize(file.file_size_bytes);
+          const series = file.series_name || "Unknown Series";
+          const episode = file.episode_number
+            ? `Episode ${file.episode_number}`
+            : "";
+          const isAvailable = isPodcastAvailable(file.download_status);
+          const downloadStatusBadge = getStatusBadge(file.download_status);
+          const downloadStatusText = getStatusText(file.download_status);
+          const transcriptionStatusBadge = getStatusBadge(file.transcription_status);
+          const transcriptionStatusText = getStatusText(file.transcription_status);
+          const needsDownloadBtn = needsDownload(file.download_status);
+          const needsTranscriptionBtn = needsTranscription(file.download_status, file.transcription_status);
+
+          return `
           <div 
-            class="podcast-item p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${isFirst ? 'bg-indigo-50 border-indigo-200' : 'border-gray-200'}"
+            class="podcast-item p-3 border rounded-lg transition-colors ${isFirst ? "bg-indigo-50 border-indigo-200" : "border-gray-200"} ${isAvailable ? "cursor-pointer hover:bg-gray-50" : "opacity-75"}"
             data-filename="${file.filename}"
+            data-id="${file.id}"
           >
             <h3 class="font-medium text-gray-900 text-sm mb-1 line-clamp-2">${title}</h3>
-            <p class="text-xs text-gray-500 truncate">${file.filename}</p>
-            <div class="flex items-center mt-2 text-xs text-gray-400">
-              <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
-              </svg>
-              Audio file
+            <p class="text-xs text-gray-500 truncate">${series} ${episode}</p>
+            <div class="flex items-center justify-between mt-2 text-xs text-gray-400">
+              <div class="flex items-center space-x-3">
+                <span class="flex items-center">
+                  <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                  </svg>
+                  ${duration}
+                </span>
+                <span>${fileSize}</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="px-2 py-1 rounded-full text-xs ${downloadStatusBadge}">
+                  ${downloadStatusText}
+                </span>
+                <span class="px-2 py-1 rounded-full text-xs ${transcriptionStatusBadge}">
+                  ${transcriptionStatusText}
+                </span>
+                ${
+                  needsDownloadBtn
+                    ? `
+                  <button 
+                    onclick="reDownloadPodcast(${file.id}, event)"
+                    class="px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  >
+                    Download
+                  </button>
+                `
+                    : needsTranscriptionBtn
+                    ? `
+                  <button 
+                    onclick="reTranscribePodcast(${file.id}, event)"
+                    class="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  >
+                    Transcribe
+                  </button>
+                `
+                    : file.transcription_status === "transcribed"
+                    ? `
+                  <button 
+                    onclick="reTranscribePodcast(${file.id}, event)"
+                    class="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  >
+                    Re-transcribe
+                  </button>
+                `
+                    : ""
+                }
+              </div>
             </div>
           </div>
         `;
-      }).join('');
+        })
+        .join("");
 
-      // Add click handlers
-      document.querySelectorAll('.podcast-item').forEach(item => {
-        item.addEventListener('click', () => {
-          const filename = item.getAttribute('data-filename');
-          if (filename) {
-            selectPodcast(filename);
-          }
-        });
+      // Add click handlers only for available podcasts
+      document.querySelectorAll(".podcast-item").forEach((item) => {
+        const filename = item.getAttribute("data-filename");
+        const audioFileId = item.getAttribute("data-id");
+        const audioFile = audioFiles.find(
+          (f: any) => f.id.toString() === audioFileId
+        );
+
+        if (audioFile && isPodcastAvailable(audioFile.download_status)) {
+          item.addEventListener("click", () => {
+            if (filename) {
+              selectPodcast(filename);
+            }
+          });
+        }
       });
-      
-      // Auto-select first podcast
-      if (audioFiles.length > 0 && !selectedPodcast) {
-        selectPodcast(audioFiles[0].filename);
+
+      // Auto-select first available podcast
+      const firstAvailable = audioFiles.find((f: any) =>
+        isPodcastAvailable(f.download_status)
+      );
+      if (firstAvailable && !selectedPodcast) {
+        selectPodcast(firstAvailable.filename);
       }
-      
     } catch (error) {
-      console.error('Error loading podcasts:', error);
+      console.error("Error loading podcasts:", error);
       podcastList.innerHTML = `
         <div class="text-center text-red-500 py-8">
           <p>Failed to load podcasts</p>
+          <p class="text-sm mt-1 text-gray-500">Make sure the backend server is running</p>
           <button onclick="loadPodcasts()" class="text-sm mt-2 text-indigo-600 hover:text-indigo-800">
             Try again
           </button>
@@ -181,26 +453,62 @@
       `;
     }
   }
-  
+
+  async function refreshAllStatuses() {
+    if (!refreshBtn) return;
+
+    const originalText = refreshBtn.textContent || "";
+    try {
+      (refreshBtn as HTMLButtonElement).disabled = true;
+      refreshBtn.innerHTML = `
+        <svg class="w-4 h-4 mr-1 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Checking...
+      `;
+
+      const response = await fetch(
+        `${API_BASE_URL}/audio-files/check-all-download-status`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (response.ok) {
+        showStatus("All podcast statuses updated", "success");
+        await loadPodcasts();
+      } else {
+        throw new Error("Failed to check statuses");
+      }
+    } catch (error) {
+      console.error("Error refreshing statuses:", error);
+      showStatus("Failed to refresh statuses", "error");
+    } finally {
+      (refreshBtn as HTMLButtonElement).disabled = false;
+      refreshBtn.innerHTML = originalText;
+    }
+  }
+
   // Download form handler
-  form?.addEventListener('submit', async (e) => {
+  form?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
-    const youtubeUrl = formData.get('youtubeUrl') as string;
+    const youtubeUrl = formData.get("youtubeUrl") as string;
 
     if (!youtubeUrl) {
-      showStatus('Please enter a YouTube URL', 'error');
+      showStatus("Please enter a YouTube URL", "error");
       return;
     }
 
     try {
       setLoading(true);
-      showStatus('Downloading audio...', 'info');
-      
-      const response = await fetch('http://localhost:8000/extract-audio', {
-        method: 'POST',
+      showStatus("Downloading audio...", "info");
+
+      const response = await fetch(`${API_BASE_URL}/extract-audio`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ url: youtubeUrl }),
       });
@@ -208,39 +516,51 @@
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.detail || 'Download failed');
+        throw new Error(result.detail || "Download failed");
       }
 
-      showStatus(`Added: ${result.filename}`, 'success');
-      
+      showStatus(`Added: ${result.filename}`, "success");
+
       // Clear form
       (e.target as HTMLFormElement).reset();
-      
+
       try {
         // Reload podcasts and select the new one
         await loadPodcasts();
         selectPodcast(result.filename);
       } catch (loadError) {
-        console.error('Error loading podcasts after download:', loadError);
-        showStatus('Podcast added but failed to refresh the list. Please refresh the page.', 'error');
+        console.error("Error loading podcasts after download:", loadError);
+        showStatus(
+          "Podcast added but failed to refresh the list. Please refresh the page.",
+          "error"
+        );
       }
-      
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error:", error);
       showStatus(
-        error instanceof Error ? error.message : 'Failed to download. Please try again.',
-        'error'
+        error instanceof Error
+          ? error.message
+          : "Failed to download. Please try again.",
+        "error"
       );
     } finally {
       setLoading(false);
     }
   });
-  
+
+  // Refresh button handler
+  refreshBtn?.addEventListener("click", refreshAllStatuses);
+
   // Load podcasts on page load
   loadPodcasts();
-  
+
+  // Initialize loading state
+  setLoading(false);
+
   // Make functions available globally
   (window as any).loadPodcasts = loadPodcasts;
+  (window as any).reDownloadPodcast = reDownloadPodcast;
+  (window as any).reTranscribePodcast = reTranscribePodcast;
 </script>
 
 <style>
@@ -250,4 +570,4 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-</style> 
+</style>

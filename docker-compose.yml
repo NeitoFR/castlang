@@ -8,6 +8,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
+    env_file:
+      - ./frontend/.env
     volumes:
       - ./frontend/app:/app
     ports:
@@ -25,6 +27,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
+    env_file:
+      - ./backend/.env
     volumes:
       - ./backend/app:/app
     ports:
