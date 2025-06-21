@@ -11,3 +11,6 @@ kill:
 
 restart:
 	docker compose restart
+
+build:
+	docker compose build

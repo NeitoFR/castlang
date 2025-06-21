@@ -8,13 +8,30 @@ const { initialFilename } = Astro.props;
 
 <div class="h-full flex flex-col">
   <!-- Empty State -->
-  <div id="emptyState" class="flex-1 flex items-center justify-center bg-gray-50">
+  <div
+    id="emptyState"
+    class="flex-1 flex items-center justify-center bg-gray-50"
+  >
     <div class="text-center p-8">
-      <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+      <svg
+        class="w-16 h-16 mx-auto mb-4 text-gray-300"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+        ></path>
       </svg>
-      <h3 class="text-lg font-medium text-gray-900 mb-2">No Podcast Selected</h3>
-      <p class="text-gray-500">Select a podcast from the library to start listening</p>
+      <h3 class="text-lg font-medium text-gray-900 mb-2">
+        No Podcast Selected
+      </h3>
+      <p class="text-gray-500">
+        Select a podcast from the library to start listening
+      </p>
     </div>
   </div>
 
@@ -24,18 +41,74 @@ const { initialFilename } = Astro.props;
     <div class="flex-shrink-0 p-6 border-b border-gray-200">
       <div class="flex items-start justify-between">
         <div class="flex-1 min-w-0">
-          <h2 id="podcastTitle" class="text-2xl font-bold text-gray-900 mb-1"></h2>
+          <h2 id="podcastTitle" class="text-2xl font-bold text-gray-900 mb-1">
+          </h2>
+          <p id="podcastSeries" class="text-sm text-gray-600 mb-1"></p>
           <p id="podcastFilename" class="text-sm text-gray-500"></p>
+          <div class="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+            <span id="podcastDuration"></span>
+            <span id="podcastSize"></span>
+            <span id="podcastStatus" class="px-2 py-1 rounded-full text-xs"
+            ></span>
+          </div>
         </div>
-        <div class="ml-4 flex-shrink-0">
+        <div class="ml-4 flex-shrink-0 flex space-x-2">
+          <button
+            id="reDownloadBtn"
+            class="hidden inline-flex items-center px-3 py-2 border border-indigo-300 text-sm font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+              ></path>
+            </svg>
+            Re-download
+          </button>
+          <button
+            id="deleteBtn"
+            class="inline-flex items-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          >
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              ></path>
+            </svg>
+            Delete
+          </button>
           <a
             id="downloadLink"
             href="#"
             download
             class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+              ></path>
             </svg>
             Download
           </a>
@@ -47,62 +120,143 @@ const { initialFilename } = Astro.props;
     <div class="flex-1 p-6">
       <div class="max-w-3xl mx-auto">
         <!-- Audio element -->
-        <audio 
-          id="audioPlayer"
-          class="w-full"
-          controls
-          preload="metadata"
-        >
+        <audio id="audioPlayer" class="w-full" controls preload="metadata">
           Your browser does not support the audio element.
         </audio>
-        
+
+        <!-- Unavailable message -->
+        <div
+          id="unavailableMessage"
+          class="hidden p-4 bg-gray-50 rounded-md text-center"
+        >
+          <svg
+            class="w-12 h-12 mx-auto mb-4 text-gray-300"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+            ></path>
+          </svg>
+          <p class="text-gray-600 mb-2">
+            This podcast is not available for streaming
+          </p>
+          <p class="text-sm text-gray-500" id="unavailableReason"></p>
+        </div>
+
         <!-- Custom progress bar -->
         <div class="mt-4">
-          <div class="flex items-center justify-between text-sm text-gray-500 mb-2">
+          <div
+            class="flex items-center justify-between text-sm text-gray-500 mb-2"
+          >
             <span id="currentTime">0:00</span>
             <span id="duration">0:00</span>
           </div>
           <div class="relative">
-            <div id="progressBar" class="w-full bg-gray-200 rounded-full h-2 cursor-pointer">
-              <div id="progressFill" class="bg-indigo-600 h-2 rounded-full transition-all duration-150" style="width: 0%"></div>
+            <div
+              id="progressBar"
+              class="w-full bg-gray-200 rounded-full h-2 cursor-pointer"
+            >
+              <div
+                id="progressFill"
+                class="bg-indigo-600 h-2 rounded-full transition-all duration-150"
+                style="width: 0%"
+              >
+              </div>
             </div>
           </div>
         </div>
-        
+
         <!-- Custom controls -->
         <div class="flex items-center justify-center space-x-6 mt-6">
-          <button id="playPauseBtn" class="p-3 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-            <svg id="playIcon" class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
-            </svg>
-            <svg id="pauseIcon" class="w-8 h-8 hidden" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-            </svg>
-          </button>
-          
-          <button id="muteBtn" class="p-2 rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-            <svg id="volumeIcon" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.784L4.5 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.5l3.883-3.784A1 1 0 019.383 3.076zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd" />
-            </svg>
-            <svg id="muteIcon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.784L4.5 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.5l3.883-3.784A1 1 0 019.383 3.076z" clip-rule="evenodd" />
-            </svg>
-          </button>
-          
-          <div class="flex items-center space-x-2">
-            <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.784L4.5 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.5l3.883-3.784A1 1 0 019.383 3.076zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd" />
-            </svg>
-            <input 
-              id="volumeSlider" 
-              type="range" 
-              min="0" 
-              max="100" 
-              value="100" 
-              class="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+          <button
+            id="playPauseBtn"
+            class="p-3 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          >
+            <svg
+              id="playIcon"
+              class="w-8 h-8"
+              fill="currentColor"
+              viewBox="0 0 20 20"
             >
-            <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.784L4.5 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.5l3.883-3.784A1 1 0 019.383 3.076zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <svg
+              id="pauseIcon"
+              class="w-8 h-8 hidden"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z"
+                clip-rule="evenodd"></path>
+            </svg>
+          </button>
+
+          <button
+            id="muteBtn"
+            class="p-2 rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+          >
+            <svg
+              id="volumeIcon"
+              class="w-6 h-6"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.784L4.5 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.5l3.883-3.784A1 1 0 019.383 3.076zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <svg
+              id="muteIcon"
+              class="w-6 h-6 hidden"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.784L4.5 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.5l3.883-3.784A1 1 0 019.383 3.076z"
+                clip-rule="evenodd"></path>
+            </svg>
+          </button>
+
+          <div class="flex items-center space-x-2">
+            <svg
+              class="w-4 h-4 text-gray-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.784L4.5 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.5l3.883-3.784A1 1 0 019.383 3.076zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <input
+              id="volumeSlider"
+              type="range"
+              min="0"
+              max="100"
+              value="100"
+              class="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            />
+            <svg
+              class="w-4 h-4 text-gray-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.784L4.5 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.5l3.883-3.784A1 1 0 019.383 3.076zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z"
+                clip-rule="evenodd"></path>
             </svg>
           </div>
         </div>
@@ -112,33 +266,131 @@ const { initialFilename } = Astro.props;
 </div>
 
 <script>
-  const emptyState = document.getElementById('emptyState');
-  const podcastDetails = document.getElementById('podcastDetails');
-  const podcastTitle = document.getElementById('podcastTitle');
-  const podcastFilename = document.getElementById('podcastFilename');
-  const downloadLink = document.getElementById('downloadLink') as HTMLAnchorElement;
-  const audioPlayer = document.getElementById('audioPlayer') as HTMLAudioElement;
-  const playPauseBtn = document.getElementById('playPauseBtn');
-  const playIcon = document.getElementById('playIcon');
-  const pauseIcon = document.getElementById('pauseIcon');
-  const muteBtn = document.getElementById('muteBtn');
-  const volumeIcon = document.getElementById('volumeIcon');
-  const muteIcon = document.getElementById('muteIcon');
-  const volumeSlider = document.getElementById('volumeSlider') as HTMLInputElement;
-  const progressBar = document.getElementById('progressBar');
-  const progressFill = document.getElementById('progressFill');
-  const currentTime = document.getElementById('currentTime');
-  const duration = document.getElementById('duration');
-  
-  let currentPodcast: string | null = null;
-  
+  const emptyState = document.getElementById("emptyState");
+  const podcastDetails = document.getElementById("podcastDetails");
+  const podcastTitle = document.getElementById("podcastTitle");
+  const podcastSeries = document.getElementById("podcastSeries");
+  const podcastFilename = document.getElementById("podcastFilename");
+  const podcastDuration = document.getElementById("podcastDuration");
+  const podcastSize = document.getElementById("podcastSize");
+  const podcastStatus = document.getElementById("podcastStatus");
+  const downloadLink = document.getElementById(
+    "downloadLink"
+  ) as HTMLAnchorElement;
+  const deleteBtn = document.getElementById("deleteBtn") as HTMLButtonElement;
+  const audioPlayer = document.getElementById(
+    "audioPlayer"
+  ) as HTMLAudioElement;
+  const playPauseBtn = document.getElementById("playPauseBtn");
+  const playIcon = document.getElementById("playIcon");
+  const pauseIcon = document.getElementById("pauseIcon");
+  const muteBtn = document.getElementById("muteBtn");
+  const volumeIcon = document.getElementById("volumeIcon");
+  const muteIcon = document.getElementById("muteIcon");
+  const volumeSlider = document.getElementById(
+    "volumeSlider"
+  ) as HTMLInputElement;
+  const progressBar = document.getElementById("progressBar");
+  const progressFill = document.getElementById("progressFill");
+  const currentTime = document.getElementById("currentTime");
+  const duration = document.getElementById("duration");
+
+  let currentPodcast: any = null;
+  let currentPodcastId: number | null = null;
+
+  // API configuration
+  const API_BASE_URL =
+    import.meta.env.PUBLIC_API_URL || "http://localhost:8000/api/v1";
+
   // Format time helper
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
-  
+
+  const formatDuration = (seconds: number | null): string => {
+    if (!seconds) return "Unknown duration";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const formatFileSize = (bytes: number | null): string => {
+    if (!bytes) return "Unknown size";
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
+  };
+
+  const getStatusBadge = (status: string): string => {
+    const statusConfig: Record<string, string> = {
+      downloaded: "bg-green-100 text-green-800",
+      downloading: "bg-blue-100 text-blue-800",
+      file_missing: "bg-red-100 text-red-800",
+      download_failed: "bg-red-100 text-red-800",
+      not_downloaded: "bg-yellow-100 text-yellow-800",
+    };
+    return statusConfig[status] || "bg-gray-100 text-gray-800";
+  };
+
+  const getStatusText = (status: string): string => {
+    const statusTexts: Record<string, string> = {
+      downloaded: "Available",
+      downloading: "Downloading...",
+      file_missing: "File Missing",
+      download_failed: "Download Failed",
+      not_downloaded: "Not Downloaded",
+    };
+    return statusTexts[status] || status;
+  };
+
+  const isPodcastAvailable = (status: string): boolean => {
+    return status === "downloaded";
+  };
+
+  const reDownloadPodcast = async () => {
+    if (!currentPodcastId) return;
+
+    const reDownloadBtn = document.getElementById(
+      "reDownloadBtn"
+    ) as HTMLButtonElement;
+    if (!reDownloadBtn) return;
+
+    const originalText = reDownloadBtn.textContent || "";
+
+    try {
+      reDownloadBtn.disabled = true;
+      reDownloadBtn.textContent = "Re-downloading...";
+
+      const response = await fetch(
+        `${API_BASE_URL}/audio-files/${currentPodcastId}/re-download`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to re-download podcast");
+      }
+
+      // Reload the podcast details
+      if (currentPodcast) {
+        await loadPodcastDetails(currentPodcast.filename);
+      }
+
+      // Refresh the podcast list
+      if ((window as any).loadPodcasts) {
+        (window as any).loadPodcasts();
+      }
+    } catch (error) {
+      console.error("Error re-downloading podcast:", error);
+      alert("Failed to re-download podcast. Please try again.");
+    } finally {
+      reDownloadBtn.disabled = false;
+      reDownloadBtn.textContent = originalText;
+    }
+  };
+
   // Update progress
   const updateProgress = () => {
     if (audioPlayer.duration) {
@@ -151,64 +403,189 @@ const { initialFilename } = Astro.props;
       }
     }
   };
-  
-  // Load podcast
-  const loadPodcast = (filename: string) => {
+
+  // Load podcast details
+  const loadPodcastDetails = async (filename: string) => {
     if (!filename) return;
-    
-    currentPodcast = filename;
-    const title = filename.replace('.mp3', '').replace(/_/g, ' ');
-    
+
+    try {
+      // Find the podcast in the list to get its ID
+      const podcastItem = document.querySelector(
+        `[data-filename="${filename}"]`
+      );
+      if (podcastItem) {
+        currentPodcastId = parseInt(podcastItem.getAttribute("data-id") || "0");
+      }
+
+      // Load full details from API
+      const response = await fetch(
+        `${API_BASE_URL}/audio-files/${currentPodcastId}`
+      );
+      if (response.ok) {
+        currentPodcast = await response.json();
+      } else {
+        // Fallback to basic info
+        currentPodcast = {
+          filename,
+          title: filename.replace(".mp3", "").replace(/_/g, " "),
+          series_name: "Unknown Series",
+          duration_seconds: null,
+          file_size_bytes: null,
+          status: "unknown",
+        };
+      }
+    } catch (error) {
+      console.error("Error loading podcast details:", error);
+      // Fallback to basic info
+      currentPodcast = {
+        filename,
+        title: filename.replace(".mp3", "").replace(/_/g, " "),
+        series_name: "Unknown Series",
+        duration_seconds: null,
+        file_size_bytes: null,
+        status: "unknown",
+      };
+    }
+
     // Update UI
-    if (podcastTitle) podcastTitle.textContent = title;
-    if (podcastFilename) podcastFilename.textContent = filename;
-    if (downloadLink) downloadLink.href = `http://localhost:8000/download/${filename}`;
-    
-    // Update audio source
-    audioPlayer.src = `http://localhost:8000/stream/${filename}`;
-    
+    if (podcastTitle) podcastTitle.textContent = currentPodcast.title;
+    if (podcastSeries) podcastSeries.textContent = currentPodcast.series_name;
+    if (podcastFilename) podcastFilename.textContent = currentPodcast.filename;
+    if (podcastDuration)
+      podcastDuration.textContent = formatDuration(
+        currentPodcast.duration_seconds
+      );
+    if (podcastSize)
+      podcastSize.textContent = formatFileSize(currentPodcast.file_size_bytes);
+
+    if (podcastStatus) {
+      podcastStatus.textContent = getStatusText(currentPodcast.status);
+      podcastStatus.className = `px-2 py-1 rounded-full text-xs ${getStatusBadge(currentPodcast.status)}`;
+    }
+
+    if (downloadLink) {
+      if (isPodcastAvailable(currentPodcast.status)) {
+        downloadLink.href = `${API_BASE_URL}/download/${filename}`;
+        downloadLink.classList.remove("hidden");
+      } else {
+        downloadLink.classList.add("hidden");
+      }
+    }
+
+    // Show/hide re-download button based on status
+    const reDownloadBtn = document.getElementById(
+      "reDownloadBtn"
+    ) as HTMLButtonElement;
+    if (reDownloadBtn) {
+      if (!isPodcastAvailable(currentPodcast.status)) {
+        reDownloadBtn.classList.remove("hidden");
+      } else {
+        reDownloadBtn.classList.add("hidden");
+      }
+    }
+
+    // Update audio source only if available
+    if (isPodcastAvailable(currentPodcast.status)) {
+      audioPlayer.src = `${API_BASE_URL}/stream/${filename}`;
+      audioPlayer.load();
+      audioPlayer.classList.remove("hidden");
+      const unavailableMessage = document.getElementById("unavailableMessage");
+      if (unavailableMessage) unavailableMessage.classList.add("hidden");
+    } else {
+      audioPlayer.src = "";
+      audioPlayer.load();
+      audioPlayer.classList.add("hidden");
+      const unavailableMessage = document.getElementById("unavailableMessage");
+      const unavailableReason = document.getElementById("unavailableReason");
+      if (unavailableMessage) {
+        unavailableMessage.classList.remove("hidden");
+        if (unavailableReason) {
+          const reasonText =
+            currentPodcast.status === "file_missing"
+              ? "The audio file appears to be missing from the server."
+              : currentPodcast.status === "download_failed"
+                ? "The download failed. Please try re-downloading."
+                : currentPodcast.status === "not_downloaded"
+                  ? "This podcast has not been downloaded yet."
+                  : "This podcast is not available for streaming.";
+          unavailableReason.textContent = reasonText;
+        }
+      }
+    }
+
     // Show details, hide empty state
-    if (emptyState) emptyState.classList.add('hidden');
-    if (podcastDetails) podcastDetails.classList.remove('hidden');
-    
+    if (emptyState) emptyState.classList.add("hidden");
+    if (podcastDetails) podcastDetails.classList.remove("hidden");
+
     // Reset player state
     audioPlayer.currentTime = 0;
-    if (progressFill) progressFill.style.width = '0%';
-    if (currentTime) currentTime.textContent = '0:00';
-    if (duration) duration.textContent = '0:00';
-    
-    // Load audio
-    audioPlayer.load();
+    if (progressFill) progressFill.style.width = "0%";
+    if (currentTime) currentTime.textContent = "0:00";
+    if (duration) duration.textContent = "0:00";
   };
-  
+
+  // Delete podcast
+  const deletePodcast = async () => {
+    if (!currentPodcastId || !currentPodcast) return;
+
+    if (
+      !confirm(`Are you sure you want to delete "${currentPodcast.title}"?`)
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/audio-files/${currentPodcastId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (response.ok) {
+        // Reload podcast list
+        if ((window as any).loadPodcasts) {
+          (window as any).loadPodcasts();
+        }
+
+        // Show empty state
+        if (emptyState) emptyState.classList.remove("hidden");
+        if (podcastDetails) podcastDetails.classList.add("hidden");
+
+        currentPodcast = null;
+        currentPodcastId = null;
+      } else {
+        alert("Failed to delete podcast");
+      }
+    } catch (error) {
+      console.error("Error deleting podcast:", error);
+      alert("Failed to delete podcast");
+    }
+  };
+
   // Event listeners
   if (audioPlayer) {
-    audioPlayer.addEventListener('loadedmetadata', () => {
+    audioPlayer.addEventListener("loadedmetadata", () => {
       if (duration) {
         duration.textContent = formatTime(audioPlayer.duration);
       }
     });
-    
-    audioPlayer.addEventListener('timeupdate', updateProgress);
-    
-    audioPlayer.addEventListener('play', () => {
-      if (playIcon) playIcon.classList.add('hidden');
-      if (pauseIcon) pauseIcon.classList.remove('hidden');
+
+    audioPlayer.addEventListener("timeupdate", updateProgress);
+
+    audioPlayer.addEventListener("play", () => {
+      if (playIcon) playIcon.classList.add("hidden");
+      if (pauseIcon) pauseIcon.classList.remove("hidden");
     });
-    
-    audioPlayer.addEventListener('pause', () => {
-      if (playIcon) playIcon.classList.remove('hidden');
-      if (pauseIcon) pauseIcon.classList.add('hidden');
-    });
-    
-    audioPlayer.addEventListener('ended', () => {
-      if (playIcon) playIcon.classList.remove('hidden');
-      if (pauseIcon) pauseIcon.classList.add('hidden');
+
+    audioPlayer.addEventListener("pause", () => {
+      if (playIcon) playIcon.classList.remove("hidden");
+      if (pauseIcon) pauseIcon.classList.add("hidden");
     });
   }
-  
+
   if (playPauseBtn) {
-    playPauseBtn.addEventListener('click', () => {
+    playPauseBtn.addEventListener("click", () => {
       if (audioPlayer.paused) {
         audioPlayer.play();
       } else {
@@ -216,45 +593,61 @@ const { initialFilename } = Astro.props;
       }
     });
   }
-  
+
   if (muteBtn) {
-    muteBtn.addEventListener('click', () => {
+    muteBtn.addEventListener("click", () => {
       audioPlayer.muted = !audioPlayer.muted;
       if (audioPlayer.muted) {
-        if (volumeIcon) volumeIcon.classList.add('hidden');
-        if (muteIcon) muteIcon.classList.remove('hidden');
+        if (volumeIcon) volumeIcon.classList.add("hidden");
+        if (muteIcon) muteIcon.classList.remove("hidden");
       } else {
-        if (volumeIcon) volumeIcon.classList.remove('hidden');
-        if (muteIcon) muteIcon.classList.add('hidden');
+        if (volumeIcon) volumeIcon.classList.remove("hidden");
+        if (muteIcon) muteIcon.classList.add("hidden");
       }
     });
   }
-  
+
   if (volumeSlider) {
-    volumeSlider.addEventListener('input', (e) => {
+    volumeSlider.addEventListener("input", (e) => {
       const target = e.target as HTMLInputElement;
       audioPlayer.volume = parseInt(target.value) / 100;
     });
   }
-  
+
   if (progressBar) {
-    progressBar.addEventListener('click', (e) => {
+    progressBar.addEventListener("click", (e) => {
       const rect = progressBar.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
       const width = rect.width;
-      const clickTime = (clickX / width) * audioPlayer.duration;
-      audioPlayer.currentTime = clickTime;
+      const percentage = clickX / width;
+      audioPlayer.currentTime = percentage * audioPlayer.duration;
     });
   }
-  
+
+  if (deleteBtn) {
+    deleteBtn.addEventListener("click", deletePodcast);
+  }
+
+  // Add re-download button event listener
+  const reDownloadBtn = document.getElementById(
+    "reDownloadBtn"
+  ) as HTMLButtonElement;
+  if (reDownloadBtn) {
+    reDownloadBtn.addEventListener("click", reDownloadPodcast);
+  }
+
   // Listen for podcast selection
-  window.addEventListener('podcastSelected', ((e: CustomEvent) => {
-    loadPodcast(e.detail.filename);
-  }) as EventListener);
-  
+  window.addEventListener("podcastSelected", (e: any) => {
+    const { filename } = e.detail;
+    loadPodcastDetails(filename);
+  });
+
   // Initialize with initial podcast if provided
-  if (currentPodcast) {
-    loadPodcast(currentPodcast);
+  const initialFilename = document.currentScript?.getAttribute(
+    "data-initial-filename"
+  );
+  if (initialFilename) {
+    loadPodcastDetails(initialFilename);
   }
 </script>
 
@@ -268,7 +661,7 @@ const { initialFilename } = Astro.props;
     border-radius: 9999px;
     outline: none;
   }
-  
+
   input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
@@ -279,11 +672,11 @@ const { initialFilename } = Astro.props;
     cursor: pointer;
     transition: background 0.15s ease-in-out;
   }
-  
+
   input[type="range"]::-webkit-slider-thumb:hover {
     background: #4338ca;
   }
-  
+
   input[type="range"]::-moz-range-thumb {
     width: 16px;
     height: 16px;
@@ -293,8 +686,8 @@ const { initialFilename } = Astro.props;
     border: none;
     transition: background 0.15s ease-in-out;
   }
-  
+
   input[type="range"]::-moz-range-thumb:hover {
     background: #4338ca;
   }
-</style> 
+</style>
