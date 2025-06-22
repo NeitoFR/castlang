@@ -86,7 +86,7 @@ class TranscriptionService:
                 "accept": "application/json",
             }
             
-            # Prepare transcription request data
+            # Prepare transcription request data with translation enabled
             data = {
                 "audio_url": audio_url,
                 "diarization": True,
@@ -97,8 +97,14 @@ class TranscriptionService:
                 },
                 "detect_language": True,
                 "enable_code_switching": True,
-                "translation": False,  # We'll handle translations separately if needed
-                "subtitles": False,    # We'll handle subtitles separately if needed
+                "translation": True,  # Enable translation
+                "translation_config": {
+                    "target_languages": ["fr", "en"]  # French and English translations
+                },
+                "subtitles": True,    # Enable subtitles
+                "subtitles_config": {
+                    "formats": ["srt"]
+                }
             }
             
             logger.info("Sending transcription request to Gladia API...")
@@ -217,7 +223,7 @@ class TranscriptionService:
             raise
     
     def _save_transcriptions_to_db(self, api_result: Dict[str, Any], audio_file_id: int, db: Session) -> List[TranscriptionDB]:
-        """Save transcription results to database."""
+        """Save transcription results and translations to database."""
         transcriptions = []
         
         try:
@@ -267,10 +273,47 @@ class TranscriptionService:
                     
                     db.add(transcription)
                     transcriptions.append(transcription)
+                    
+                    # Handle translations if available
+                    translations = segment.get('translations', {})
+                    
+                    # Save English translation
+                    if 'en' in translations:
+                        en_translation = translations['en']
+                        if en_translation.strip():
+                            en_transcription = TranscriptionDB(
+                                audio_file_id=audio_file_id,
+                                language='en',
+                                content_type='translation',
+                                content=en_translation,
+                                confidence_score=confidence,
+                                start_time_seconds=start_time,
+                                end_time_seconds=end_time,
+                                segment_order=i + 1
+                            )
+                            db.add(en_transcription)
+                            transcriptions.append(en_transcription)
+                    
+                    # Save French translation
+                    if 'fr' in translations:
+                        fr_translation = translations['fr']
+                        if fr_translation.strip():
+                            fr_transcription = TranscriptionDB(
+                                audio_file_id=audio_file_id,
+                                language='fr',
+                                content_type='translation',
+                                content=fr_translation,
+                                confidence_score=confidence,
+                                start_time_seconds=start_time,
+                                end_time_seconds=end_time,
+                                segment_order=i + 1
+                            )
+                            db.add(fr_transcription)
+                            transcriptions.append(fr_transcription)
                 
-                # Commit all transcriptions
+                # Commit all transcriptions and translations
                 db.commit()
-                logger.info(f"Saved {len(transcriptions)} transcription segments to database")
+                logger.info(f"Saved {len(transcriptions)} transcription and translation segments to database")
                 
         except Exception as e:
             logger.error(f"Error saving transcriptions to database: {e}")
@@ -290,6 +333,21 @@ class TranscriptionService:
         return db.query(TranscriptionDB).filter(
             TranscriptionDB.audio_file_id == audio_file_id,
             TranscriptionDB.language == language
+        ).order_by(TranscriptionDB.segment_order).all()
+    
+    def get_transcriptions_by_content_type(self, audio_file_id: int, content_type: str, db: Session) -> List[TranscriptionDB]:
+        """Get transcriptions for a specific content type (transcription or translation)."""
+        return db.query(TranscriptionDB).filter(
+            TranscriptionDB.audio_file_id == audio_file_id,
+            TranscriptionDB.content_type == content_type
+        ).order_by(TranscriptionDB.segment_order).all()
+    
+    def get_transcriptions_by_language_and_content_type(self, audio_file_id: int, language: str, content_type: str, db: Session) -> List[TranscriptionDB]:
+        """Get transcriptions for a specific language and content type."""
+        return db.query(TranscriptionDB).filter(
+            TranscriptionDB.audio_file_id == audio_file_id,
+            TranscriptionDB.language == language,
+            TranscriptionDB.content_type == content_type
         ).order_by(TranscriptionDB.segment_order).all()
     
     def delete_transcriptions_for_audio_file(self, audio_file_id: int, db: Session) -> bool:

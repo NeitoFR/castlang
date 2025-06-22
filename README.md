@@ -6,6 +6,7 @@ A full-stack application for downloading, managing, and streaming podcasts from 
 
 - **YouTube to MP3 Download**: Convert YouTube videos to high-quality MP3 audio files
 - **Podcast Library Management**: Organize and manage your downloaded podcasts
+- **Audio Transcription**: Automatic transcription of audio files using Gladia API
 - **Streaming Audio Player**: Built-in audio player with seeking and volume controls
 - **File Status Monitoring**: Automatic detection of missing files and status updates
 - **Re-download Capability**: Re-download podcasts when files are missing or corrupted
@@ -20,6 +21,7 @@ A full-stack application for downloading, managing, and streaming podcasts from 
 - **Frontend**: Astro with TypeScript and Tailwind CSS
 - **Database**: PostgreSQL with Alembic migrations
 - **Audio Processing**: yt-dlp for YouTube downloads
+- **Transcription**: Gladia API for audio-to-text conversion
 - **Containerization**: Docker and docker-compose
 
 ## Quick Start
@@ -126,6 +128,9 @@ MAX_FILE_SIZE=1073741824  # 1GB in bytes
 AUDIO_FORMAT=bestaudio/best
 AUDIO_CODEC=mp3
 AUDIO_QUALITY=192
+
+# Transcription Configuration
+GLADIA_API_KEY=your_gladia_api_key_here
 ```
 
 ### Frontend (.env)
@@ -161,6 +166,15 @@ PUBLIC_ENABLE_STREAMING=true
 
 - `GET /api/v1/audio-files/series/{series_name}` - Get audio files by series
 
+### Transcription Endpoints
+
+- `POST /api/v1/audio-files/{id}/transcribe` - Start transcription for an audio file
+- `GET /api/v1/audio-files/{id}/transcription-status` - Get transcription status
+- `GET /api/v1/audio-files/{id}/transcriptions` - Get all transcriptions for an audio file
+- `GET /api/v1/audio-files/{id}/transcriptions/{language}` - Get transcriptions by language
+- `GET /api/v1/audio-files/{id}/with-transcriptions` - Get audio file with transcriptions
+- `DELETE /api/v1/audio-files/{id}/transcriptions` - Delete all transcriptions for an audio file
+
 ### Health Check
 
 - `GET /api/v1/health` - Application health status
@@ -173,6 +187,9 @@ The application includes a comprehensive file status monitoring system:
 
 - **`downloaded`**: File is available and ready for streaming/download
 - **`downloading`**: File is currently being downloaded
+- **`transcribing`**: File is currently being transcribed
+- **`transcribed`**: File has been transcribed successfully
+- **`transcription_failed`**: Transcription failed
 - **`file_missing`**: File was previously downloaded but is no longer present on disk
 - **`download_failed`**: Previous download attempt failed
 - **`not_downloaded`**: File has not been downloaded yet
@@ -191,6 +208,171 @@ The application includes a comprehensive file status monitoring system:
 - Updates file metadata after successful re-download
 - Maintains file organization and series information
 
+## Audio Transcription
+
+CastLang includes a powerful audio transcription system that automatically converts audio files to text using the Gladia API. This feature is particularly useful for creating searchable transcripts, generating subtitles, or analyzing podcast content.
+
+### Setup
+
+1. **Get a Gladia API Key**:
+   - Sign up at [Gladia.io](https://www.gladia.io/)
+   - Obtain your free API key
+   - Add it to your `.env` file: `GLADIA_API_KEY=your_key_here`
+
+2. **Installation**:
+   - The transcription service uses the `requests` package (already included in requirements.txt)
+   - No additional setup required
+
+### How Transcription Works
+
+The transcription process follows a sophisticated workflow:
+
+1. **File Validation**: Ensures the audio file exists and is in a supported format
+2. **Upload to Gladia**: Uploads the audio file to Gladia's servers using their upload API
+3. **Transcription Request**: Sends a transcription request with the uploaded file URL
+4. **Polling for Results**: Continuously polls for completion status
+5. **Data Storage**: Saves transcription segments to the database with metadata
+
+### Transcription Features
+
+- **Automatic Language Detection**: Detects the primary language of the audio content
+- **Speaker Diarization**: Identifies different speakers (configured for 1-3 speakers)
+- **Code Switching Support**: Handles mixed-language content seamlessly
+- **Confidence Scores**: Provides accuracy scores for each transcription segment
+- **Time Stamps**: Includes precise start and end times for each segment
+- **Segment Ordering**: Maintains proper chronological order of content
+- **Multi-language Support**: Works with any language supported by Gladia
+
+### Usage Examples
+
+#### Start Transcription
+
+```bash
+# Start transcription for audio file ID 1
+curl -X POST "http://localhost:8000/api/v1/audio-files/1/transcribe"
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Transcription started successfully",
+  "audio_file_id": 1,
+  "transcriptions_count": 15
+}
+```
+
+#### Check Transcription Status
+
+```bash
+# Check status of transcription for audio file ID 1
+curl "http://localhost:8000/api/v1/audio-files/1/transcription-status"
+```
+
+**Response:**
+```json
+{
+  "audio_file_id": 1,
+  "status": "transcribed",
+  "transcriptions_count": 15
+}
+```
+
+#### Get All Transcriptions
+
+```bash
+# Get all transcription segments for audio file ID 1
+curl "http://localhost:8000/api/v1/audio-files/1/transcriptions"
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "audio_file_id": 1,
+    "language": "en",
+    "content_type": "transcription",
+    "content": "Hello everyone, welcome to today's podcast episode.",
+    "confidence_score": 0.95,
+    "start_time_seconds": 0.0,
+    "end_time_seconds": 3.2,
+    "segment_order": 1,
+    "created_at": "2024-01-01T12:00:00",
+    "updated_at": "2024-01-01T12:00:00"
+  }
+]
+```
+
+#### Get Transcriptions by Language
+
+```bash
+# Get transcriptions for a specific language
+curl "http://localhost:8000/api/v1/audio-files/1/transcriptions/en"
+```
+
+#### Get Audio File with Transcriptions
+
+```bash
+# Get complete audio file data including all transcriptions
+curl "http://localhost:8000/api/v1/audio-files/1/with-transcriptions"
+```
+
+### Transcription Data Structure
+
+Each transcription segment includes:
+
+- **`id`**: Unique identifier for the transcription segment
+- **`audio_file_id`**: Reference to the parent audio file
+- **`language`**: Language code (e.g., "en", "ja", "fr")
+- **`content_type`**: Type of content ("transcription" or "translation")
+- **`content`**: The transcribed text content
+- **`confidence_score`**: Accuracy score from 0.00 to 1.00
+- **`start_time_seconds`**: Start time of the segment in seconds
+- **`end_time_seconds`**: End time of the segment in seconds
+- **`segment_order`**: Sequential order within the audio file
+- **`created_at`**: Timestamp when the transcription was created
+- **`updated_at`**: Timestamp when the transcription was last updated
+
+### Error Handling
+
+The transcription service includes robust error handling:
+
+- **File Validation**: Ensures audio files exist before transcription
+- **Upload Failures**: Handles network issues during file upload
+- **Transcription Failures**: Manages API errors and timeouts
+- **Status Updates**: Automatically updates file status on failures
+- **Logging**: Comprehensive logging for debugging and monitoring
+- **Timeout Protection**: Prevents infinite polling with 5-minute timeout
+
+### Performance Considerations
+
+- **Synchronous Operation**: Transcription is a blocking operation that may take several minutes
+- **File Size**: Larger files require more processing time
+- **API Limits**: Respects Gladia API rate limits and quotas
+- **Database Storage**: Transcription data is stored efficiently with proper indexing
+- **Memory Usage**: Optimized for handling large audio files
+
+### Database Schema
+
+The transcription data is stored in the `transcriptions` table:
+
+```sql
+CREATE TABLE transcriptions (
+    id SERIAL PRIMARY KEY,
+    audio_file_id INTEGER REFERENCES audio_files(id) ON DELETE CASCADE,
+    language VARCHAR(10) NOT NULL,
+    content_type VARCHAR(20) NOT NULL,
+    content TEXT NOT NULL,
+    confidence_score DECIMAL(3, 2),
+    start_time_seconds DECIMAL(10, 3),
+    end_time_seconds DECIMAL(10, 3),
+    segment_order INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
 ## Database Schema
 
 ### AudioFile Table
@@ -207,6 +389,24 @@ CREATE TABLE audio_files (
     file_size_bytes BIGINT,
     file_path TEXT NOT NULL,
     status VARCHAR(50) DEFAULT 'not_downloaded',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Transcriptions Table
+
+```sql
+CREATE TABLE transcriptions (
+    id SERIAL PRIMARY KEY,
+    audio_file_id INTEGER REFERENCES audio_files(id) ON DELETE CASCADE,
+    language VARCHAR(10) NOT NULL,
+    content_type VARCHAR(20) NOT NULL,
+    content TEXT NOT NULL,
+    confidence_score DECIMAL(3, 2),
+    start_time_seconds DECIMAL(10, 3),
+    end_time_seconds DECIMAL(10, 3),
+    segment_order INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -291,6 +491,13 @@ make clean
    - Verify backend API is running
    - Check `PUBLIC_API_URL` in frontend `.env`
    - Clear browser cache
+
+5. **Transcription Failures**:
+   - Verify `GLADIA_API_KEY` is set in backend `.env`
+   - Check that audio files are downloaded before transcription
+   - Ensure sufficient API quota with Gladia
+   - Check network connectivity for API calls
+   - Review backend logs for detailed error messages
 
 ### Logs
 

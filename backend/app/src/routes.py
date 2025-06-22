@@ -23,6 +23,8 @@ from src.services import (
     transcribe_audio_file,
     get_transcriptions_for_audio_file,
     get_transcriptions_by_language,
+    get_transcriptions_by_content_type,
+    get_transcriptions_by_language_and_content_type,
     get_audio_file_with_transcriptions,
     delete_transcriptions_for_audio_file,
     get_transcription_status
@@ -267,6 +269,54 @@ async def get_transcriptions_by_language_endpoint(audio_file_id: int, language: 
         raise
     except Exception as e:
         logger.error(f"Error getting transcriptions for audio file {audio_file_id} in language {language}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/audio-files/{audio_file_id}/transcriptions/content-type/{content_type}", response_model=List[Transcription])
+async def get_transcriptions_by_content_type_endpoint(audio_file_id: int, content_type: str, db: Session = Depends(get_db)):
+    """Get transcriptions for a specific content type (transcription or translation)."""
+    try:
+        check_database_connection()
+        
+        # Check if audio file exists
+        audio_file = get_audio_file_by_id(db, audio_file_id)
+        if not audio_file:
+            raise HTTPException(status_code=404, detail="Audio file not found")
+        
+        # Validate content type
+        if content_type not in ['transcription', 'translation']:
+            raise HTTPException(status_code=400, detail="Content type must be 'transcription' or 'translation'")
+        
+        transcriptions = get_transcriptions_by_content_type(audio_file_id, content_type, db)
+        return transcriptions
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting transcriptions for audio file {audio_file_id} with content type {content_type}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/audio-files/{audio_file_id}/transcriptions/{language}/{content_type}", response_model=List[Transcription])
+async def get_transcriptions_by_language_and_content_type_endpoint(audio_file_id: int, language: str, content_type: str, db: Session = Depends(get_db)):
+    """Get transcriptions for a specific language and content type."""
+    try:
+        check_database_connection()
+        
+        # Check if audio file exists
+        audio_file = get_audio_file_by_id(db, audio_file_id)
+        if not audio_file:
+            raise HTTPException(status_code=404, detail="Audio file not found")
+        
+        # Validate content type
+        if content_type not in ['transcription', 'translation']:
+            raise HTTPException(status_code=400, detail="Content type must be 'transcription' or 'translation'")
+        
+        transcriptions = get_transcriptions_by_language_and_content_type(audio_file_id, language, content_type, db)
+        return transcriptions
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting transcriptions for audio file {audio_file_id} in language {language} with content type {content_type}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/audio-files/{audio_file_id}/with-transcriptions", response_model=AudioFileWithTranscriptions)

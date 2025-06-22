@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from src.models import AudioFile, AudioFileDB, TranscriptionDB, Transcription
+from src.models import AudioFile, AudioFileDB, TranscriptionDB, Transcription, AudioFileWithTranscriptions
 from src.database import get_db
 from src.transcription_service import transcription_service
 from dotenv import load_dotenv
@@ -240,9 +240,18 @@ def get_transcriptions_by_language(audio_file_id: int, language: str, db: Sessio
     db_transcriptions = transcription_service.get_transcriptions_by_language(audio_file_id, language, db)
     return [Transcription.from_orm(transcription) for transcription in db_transcriptions]
 
+def get_transcriptions_by_content_type(audio_file_id: int, content_type: str, db: Session) -> List[Transcription]:
+    """Get transcriptions for a specific content type (transcription or translation)."""
+    db_transcriptions = transcription_service.get_transcriptions_by_content_type(audio_file_id, content_type, db)
+    return [Transcription.from_orm(transcription) for transcription in db_transcriptions]
+
+def get_transcriptions_by_language_and_content_type(audio_file_id: int, language: str, content_type: str, db: Session) -> List[Transcription]:
+    """Get transcriptions for a specific language and content type."""
+    db_transcriptions = transcription_service.get_transcriptions_by_language_and_content_type(audio_file_id, language, content_type, db)
+    return [Transcription.from_orm(transcription) for transcription in db_transcriptions]
+
 def get_audio_file_with_transcriptions(audio_file_id: int, db: Session) -> Optional[AudioFileWithTranscriptions]:
     """Get an audio file with all its transcriptions."""
-    from src.models import AudioFileWithTranscriptions
     
     db_audio_file = db.query(AudioFileDB).filter(AudioFileDB.id == audio_file_id).first()
     if not db_audio_file:
