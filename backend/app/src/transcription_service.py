@@ -184,7 +184,7 @@ class TranscriptionService:
             raise FileNotFoundError(f"Audio file not found at {audio_file.file_path}")
         
         # Update status to transcribing
-        audio_file.status = 'transcribing'
+        audio_file.transcription_status = 'transcribing'
         db.commit()
         
         try:
@@ -207,7 +207,7 @@ class TranscriptionService:
             transcriptions = self._save_transcriptions_to_db(result, audio_file_id, db)
             
             # Update audio file status
-            audio_file.status = 'transcribed'
+            audio_file.transcription_status = 'transcribed'
             db.commit()
             
             return {
@@ -219,7 +219,7 @@ class TranscriptionService:
             
         except Exception as e:
             logger.error(f"Error transcribing audio file {audio_file_id}: {e}")
-            audio_file.status = 'transcription_failed'
+            audio_file.transcription_status = 'transcription_failed'
             db.commit()
             raise
     
