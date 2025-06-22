@@ -231,15 +231,22 @@ async def start_transcription(audio_file_id: int, db: Session = Depends(get_db))
         if not audio_file:
             raise HTTPException(status_code=404, detail="Audio file not found")
         
-        # Allow transcription for downloaded or already transcribed files
-        if audio_file.status not in ['downloaded', 'transcribed']:
+        # Allow transcription for downloaded files with appropriate transcription status
+        if audio_file.download_status != 'downloaded':
             raise HTTPException(
                 status_code=400, 
-                detail=f"Audio file must be downloaded or transcribed to re-transcribe. Current status: {audio_file.status}"
+                detail=f"Audio file must be downloaded to transcribe. Current download status: {audio_file.download_status}"
             )
         
-        # If already transcribed, delete existing transcriptions first
-        if audio_file.status == 'transcribed':
+        # Allow transcription if not currently transcribing
+        if audio_file.transcription_status == 'transcribing':
+            raise HTTPException(
+                status_code=400, 
+                detail="Audio file is currently being transcribed. Please wait for the current transcription to complete."
+            )
+        
+        # If already transcribed or failed, delete existing transcriptions first
+        if audio_file.transcription_status in ['transcribed', 'transcription_failed']:
             logger.info(f"Deleting existing transcriptions for audio file {audio_file_id} before re-transcription")
             delete_transcriptions_for_audio_file(audio_file_id, db)
         
@@ -422,7 +429,7 @@ async def stream_audio(filename: str, request: Request, db: Session = Depends(ge
             raise HTTPException(status_code=404, detail="Audio file not found")
         
         # Check if file is actually available
-        if audio_file.status != 'downloaded':
+        if audio_file.download_status != 'downloaded':
             raise HTTPException(status_code=404, detail="Audio file not available for streaming")
         
         file_path = Path(audio_file.file_path)
@@ -512,7 +519,7 @@ async def download_audio_file(filename: str, db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail="Audio file not found")
         
         # Check if file is actually available
-        if audio_file.status != 'downloaded':
+        if audio_file.download_status != 'downloaded':
             raise HTTPException(status_code=404, detail="Audio file not available for download")
         
         file_path = Path(audio_file.file_path)
