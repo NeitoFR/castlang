@@ -48,11 +48,49 @@ const { initialFilename } = Astro.props;
           <div class="flex items-center space-x-4 mt-2 text-sm text-gray-500">
             <span id="podcastDuration"></span>
             <span id="podcastSize"></span>
-            <span id="podcastStatus" class="px-2 py-1 rounded-full text-xs"
-            ></span>
+            <span id="podcastDownloadStatus" class="px-2 py-1 rounded-full text-xs"></span>
+            <span id="podcastTranscriptionStatus" class="px-2 py-1 rounded-full text-xs"></span>
           </div>
         </div>
         <div class="ml-4 flex-shrink-0 flex space-x-2">
+          <button
+            id="downloadBtn"
+            class="hidden inline-flex items-center px-3 py-2 border border-indigo-300 text-sm font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+              ></path>
+            </svg>
+            Download
+          </button>
+          <button
+            id="transcribeBtn"
+            class="hidden inline-flex items-center px-3 py-2 border border-purple-300 text-sm font-medium rounded-md text-purple-700 bg-white hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+          >
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              ></path>
+            </svg>
+            Transcribe
+          </button>
           <button
             id="reDownloadBtn"
             class="hidden inline-flex items-center px-3 py-2 border border-indigo-300 text-sm font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -71,6 +109,25 @@ const { initialFilename } = Astro.props;
               ></path>
             </svg>
             Re-download
+          </button>
+          <button
+            id="reTranscribeBtn"
+            class="hidden inline-flex items-center px-3 py-2 border border-purple-300 text-sm font-medium rounded-md text-purple-700 bg-white hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+          >
+            <svg
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              ></path>
+            </svg>
+            Re-transcribe
           </button>
           <button
             id="deleteBtn"
@@ -273,7 +330,8 @@ const { initialFilename } = Astro.props;
   const podcastFilename = document.getElementById("podcastFilename");
   const podcastDuration = document.getElementById("podcastDuration");
   const podcastSize = document.getElementById("podcastSize");
-  const podcastStatus = document.getElementById("podcastStatus");
+  const podcastDownloadStatus = document.getElementById("podcastDownloadStatus");
+  const podcastTranscriptionStatus = document.getElementById("podcastTranscriptionStatus");
   const downloadLink = document.getElementById(
     "downloadLink"
   ) as HTMLAnchorElement;
@@ -325,35 +383,135 @@ const { initialFilename } = Astro.props;
   const getStatusBadge = (status: string): string => {
     const statusConfig: Record<string, string> = {
       downloaded: "bg-green-100 text-green-800",
-      downloading: "bg-blue-100 text-blue-800",
-      file_missing: "bg-red-100 text-red-800",
-      download_failed: "bg-red-100 text-red-800",
       not_downloaded: "bg-yellow-100 text-yellow-800",
+      downloading: "bg-blue-100 text-blue-800",
+      download_error: "bg-red-100 text-red-800",
+      extraction_error: "bg-red-100 text-red-800",
+      not_transcribed: "bg-gray-100 text-gray-800",
+      transcribing: "bg-blue-100 text-blue-800",
+      transcribed: "bg-purple-100 text-purple-800",
+      transcription_failed: "bg-red-100 text-red-800",
     };
     return statusConfig[status] || "bg-gray-100 text-gray-800";
   };
 
   const getStatusText = (status: string): string => {
     const statusTexts: Record<string, string> = {
-      downloaded: "Available",
-      downloading: "Downloading...",
-      file_missing: "File Missing",
-      download_failed: "Download Failed",
+      downloaded: "Downloaded",
       not_downloaded: "Not Downloaded",
+      downloading: "Downloading...",
+      download_error: "Download Error",
+      extraction_error: "Extraction Error",
+      not_transcribed: "Not Transcribed",
+      transcribing: "Transcribing...",
+      transcribed: "Transcribed",
+      transcription_failed: "Transcription Failed",
     };
     return statusTexts[status] || status;
   };
 
-  const isPodcastAvailable = (status: string): boolean => {
-    return status === "downloaded";
+  const isPodcastAvailable = (downloadStatus: string): boolean => {
+    return downloadStatus === "downloaded";
+  };
+
+  const needsDownload = (downloadStatus: string): boolean => {
+    return downloadStatus === "not_downloaded" || downloadStatus === "download_error" || downloadStatus === "extraction_error";
+  };
+
+  const needsTranscription = (downloadStatus: string, transcriptionStatus: string): boolean => {
+    return downloadStatus === "downloaded" && (transcriptionStatus === "not_transcribed" || transcriptionStatus === "transcription_failed");
+  };
+
+  const canReTranscribe = (downloadStatus: string, transcriptionStatus: string): boolean => {
+    return downloadStatus === "downloaded" && transcriptionStatus === "transcribed";
+  };
+
+  const downloadPodcast = async () => {
+    if (!currentPodcastId) return;
+
+    const downloadBtn = document.getElementById("downloadBtn") as HTMLButtonElement;
+    if (!downloadBtn) return;
+
+    const originalText = downloadBtn.textContent || "";
+
+    try {
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = "Downloading...";
+
+      const response = await fetch(
+        `${API_BASE_URL}/audio-files/${currentPodcastId}/re-download`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to download podcast");
+      }
+
+      // Reload the podcast details
+      if (currentPodcast) {
+        await loadPodcastDetails(currentPodcast.filename);
+      }
+
+      // Refresh the podcast list
+      if ((window as any).loadPodcasts) {
+        (window as any).loadPodcasts();
+      }
+    } catch (error) {
+      console.error("Error downloading podcast:", error);
+      alert("Failed to download podcast. Please try again.");
+    } finally {
+      downloadBtn.disabled = false;
+      downloadBtn.textContent = originalText;
+    }
+  };
+
+  const transcribePodcast = async () => {
+    if (!currentPodcastId) return;
+
+    const transcribeBtn = document.getElementById("transcribeBtn") as HTMLButtonElement;
+    if (!transcribeBtn) return;
+
+    const originalText = transcribeBtn.textContent || "";
+
+    try {
+      transcribeBtn.disabled = true;
+      transcribeBtn.textContent = "Transcribing...";
+
+      const response = await fetch(
+        `${API_BASE_URL}/audio-files/${currentPodcastId}/transcribe`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to transcribe podcast");
+      }
+
+      // Reload the podcast details
+      if (currentPodcast) {
+        await loadPodcastDetails(currentPodcast.filename);
+      }
+
+      // Refresh the podcast list
+      if ((window as any).loadPodcasts) {
+        (window as any).loadPodcasts();
+      }
+    } catch (error) {
+      console.error("Error transcribing podcast:", error);
+      alert("Failed to transcribe podcast. Please try again.");
+    } finally {
+      transcribeBtn.disabled = false;
+      transcribeBtn.textContent = originalText;
+    }
   };
 
   const reDownloadPodcast = async () => {
     if (!currentPodcastId) return;
 
-    const reDownloadBtn = document.getElementById(
-      "reDownloadBtn"
-    ) as HTMLButtonElement;
+    const reDownloadBtn = document.getElementById("reDownloadBtn") as HTMLButtonElement;
     if (!reDownloadBtn) return;
 
     const originalText = reDownloadBtn.textContent || "";
@@ -388,6 +546,47 @@ const { initialFilename } = Astro.props;
     } finally {
       reDownloadBtn.disabled = false;
       reDownloadBtn.textContent = originalText;
+    }
+  };
+
+  const reTranscribePodcast = async () => {
+    if (!currentPodcastId) return;
+
+    const reTranscribeBtn = document.getElementById("reTranscribeBtn") as HTMLButtonElement;
+    if (!reTranscribeBtn) return;
+
+    const originalText = reTranscribeBtn.textContent || "";
+
+    try {
+      reTranscribeBtn.disabled = true;
+      reTranscribeBtn.textContent = "Re-transcribing...";
+
+      const response = await fetch(
+        `${API_BASE_URL}/audio-files/${currentPodcastId}/transcribe`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to re-transcribe podcast");
+      }
+
+      // Reload the podcast details
+      if (currentPodcast) {
+        await loadPodcastDetails(currentPodcast.filename);
+      }
+
+      // Refresh the podcast list
+      if ((window as any).loadPodcasts) {
+        (window as any).loadPodcasts();
+      }
+    } catch (error) {
+      console.error("Error re-transcribing podcast:", error);
+      alert("Failed to re-transcribe podcast. Please try again.");
+    } finally {
+      reTranscribeBtn.disabled = false;
+      reTranscribeBtn.textContent = originalText;
     }
   };
 
@@ -431,7 +630,8 @@ const { initialFilename } = Astro.props;
           series_name: "Unknown Series",
           duration_seconds: null,
           file_size_bytes: null,
-          status: "unknown",
+          download_status: "unknown",
+          transcription_status: "unknown",
         };
       }
     } catch (error) {
@@ -443,7 +643,8 @@ const { initialFilename } = Astro.props;
         series_name: "Unknown Series",
         duration_seconds: null,
         file_size_bytes: null,
-        status: "unknown",
+        download_status: "unknown",
+        transcription_status: "unknown",
       };
     }
 
@@ -458,13 +659,18 @@ const { initialFilename } = Astro.props;
     if (podcastSize)
       podcastSize.textContent = formatFileSize(currentPodcast.file_size_bytes);
 
-    if (podcastStatus) {
-      podcastStatus.textContent = getStatusText(currentPodcast.status);
-      podcastStatus.className = `px-2 py-1 rounded-full text-xs ${getStatusBadge(currentPodcast.status)}`;
+    if (podcastDownloadStatus) {
+      podcastDownloadStatus.textContent = getStatusText(currentPodcast.download_status);
+      podcastDownloadStatus.className = `px-2 py-1 rounded-full text-xs ${getStatusBadge(currentPodcast.download_status)}`;
+    }
+
+    if (podcastTranscriptionStatus) {
+      podcastTranscriptionStatus.textContent = getStatusText(currentPodcast.transcription_status);
+      podcastTranscriptionStatus.className = `px-2 py-1 rounded-full text-xs ${getStatusBadge(currentPodcast.transcription_status)}`;
     }
 
     if (downloadLink) {
-      if (isPodcastAvailable(currentPodcast.status)) {
+      if (isPodcastAvailable(currentPodcast.download_status)) {
         downloadLink.href = `${API_BASE_URL}/download/${filename}`;
         downloadLink.classList.remove("hidden");
       } else {
@@ -472,20 +678,46 @@ const { initialFilename } = Astro.props;
       }
     }
 
-    // Show/hide re-download button based on status
-    const reDownloadBtn = document.getElementById(
-      "reDownloadBtn"
-    ) as HTMLButtonElement;
+    // Show/hide buttons based on status
+    const downloadBtn = document.getElementById("downloadBtn") as HTMLButtonElement;
+    const transcribeBtn = document.getElementById("transcribeBtn") as HTMLButtonElement;
+    const reDownloadBtn = document.getElementById("reDownloadBtn") as HTMLButtonElement;
+    const reTranscribeBtn = document.getElementById("reTranscribeBtn") as HTMLButtonElement;
+
+    if (downloadBtn) {
+      if (needsDownload(currentPodcast.download_status)) {
+        downloadBtn.classList.remove("hidden");
+      } else {
+        downloadBtn.classList.add("hidden");
+      }
+    }
+
+    if (transcribeBtn) {
+      if (needsTranscription(currentPodcast.download_status, currentPodcast.transcription_status)) {
+        transcribeBtn.classList.remove("hidden");
+      } else {
+        transcribeBtn.classList.add("hidden");
+      }
+    }
+
     if (reDownloadBtn) {
-      if (!isPodcastAvailable(currentPodcast.status)) {
+      if (currentPodcast.download_status === "downloaded") {
         reDownloadBtn.classList.remove("hidden");
       } else {
         reDownloadBtn.classList.add("hidden");
       }
     }
 
+    if (reTranscribeBtn) {
+      if (canReTranscribe(currentPodcast.download_status, currentPodcast.transcription_status)) {
+        reTranscribeBtn.classList.remove("hidden");
+      } else {
+        reTranscribeBtn.classList.add("hidden");
+      }
+    }
+
     // Update audio source only if available
-    if (isPodcastAvailable(currentPodcast.status)) {
+    if (isPodcastAvailable(currentPodcast.download_status)) {
       audioPlayer.src = `${API_BASE_URL}/stream/${filename}`;
       audioPlayer.load();
       audioPlayer.classList.remove("hidden");
@@ -501,11 +733,11 @@ const { initialFilename } = Astro.props;
         unavailableMessage.classList.remove("hidden");
         if (unavailableReason) {
           const reasonText =
-            currentPodcast.status === "file_missing"
-              ? "The audio file appears to be missing from the server."
-              : currentPodcast.status === "download_failed"
-                ? "The download failed. Please try re-downloading."
-                : currentPodcast.status === "not_downloaded"
+            currentPodcast.download_status === "download_error"
+              ? "The download failed. Please try downloading again."
+              : currentPodcast.download_status === "extraction_error"
+                ? "The audio extraction failed. Please try downloading again."
+                : currentPodcast.download_status === "not_downloaded"
                   ? "This podcast has not been downloaded yet."
                   : "This podcast is not available for streaming.";
           unavailableReason.textContent = reasonText;
@@ -628,12 +860,30 @@ const { initialFilename } = Astro.props;
     deleteBtn.addEventListener("click", deletePodcast);
   }
 
+  // Add download button event listener
+  const downloadBtn = document.getElementById("downloadBtn") as HTMLButtonElement;
+  if (downloadBtn) {
+    downloadBtn.addEventListener("click", downloadPodcast);
+  }
+
+  // Add transcribe button event listener
+  const transcribeBtn = document.getElementById("transcribeBtn") as HTMLButtonElement;
+  if (transcribeBtn) {
+    transcribeBtn.addEventListener("click", transcribePodcast);
+  }
+
   // Add re-download button event listener
   const reDownloadBtn = document.getElementById(
     "reDownloadBtn"
   ) as HTMLButtonElement;
   if (reDownloadBtn) {
     reDownloadBtn.addEventListener("click", reDownloadPodcast);
+  }
+
+  // Add re-transcribe button event listener
+  const reTranscribeBtn = document.getElementById("reTranscribeBtn") as HTMLButtonElement;
+  if (reTranscribeBtn) {
+    reTranscribeBtn.addEventListener("click", reTranscribePodcast);
   }
 
   // Listen for podcast selection

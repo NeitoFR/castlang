@@ -94,7 +94,7 @@
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+            d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
           ></path>
         </svg>
         <p>Loading podcasts...</p>
@@ -199,27 +199,47 @@
   function getStatusBadge(status: string): string {
     const statusConfig: Record<string, string> = {
       downloaded: "bg-green-100 text-green-800",
-      downloading: "bg-blue-100 text-blue-800",
-      file_missing: "bg-red-100 text-red-800",
-      download_failed: "bg-red-100 text-red-800",
       not_downloaded: "bg-yellow-100 text-yellow-800",
+      downloading: "bg-blue-100 text-blue-800",
+      download_error: "bg-red-100 text-red-800",
+      extraction_error: "bg-red-100 text-red-800",
+      not_transcribed: "bg-gray-100 text-gray-800",
+      transcribing: "bg-blue-100 text-blue-800",
+      transcribed: "bg-purple-100 text-purple-800",
+      transcription_failed: "bg-red-100 text-red-800",
     };
     return statusConfig[status] || "bg-gray-100 text-gray-800";
   }
 
   function getStatusText(status: string): string {
     const statusTexts: Record<string, string> = {
-      downloaded: "Available",
-      downloading: "Downloading...",
-      file_missing: "File Missing",
-      download_failed: "Download Failed",
+      downloaded: "Downloaded",
       not_downloaded: "Not Downloaded",
+      downloading: "Downloading...",
+      download_error: "Download Error",
+      extraction_error: "Extraction Error",
+      not_transcribed: "Not Transcribed",
+      transcribing: "Transcribing...",
+      transcribed: "Transcribed",
+      transcription_failed: "Transcription Failed",
     };
     return statusTexts[status] || status;
   }
 
-  function isPodcastAvailable(status: string): boolean {
-    return status === "downloaded";
+  function isPodcastAvailable(downloadStatus: string): boolean {
+    return downloadStatus === "downloaded";
+  }
+
+  function canTranscribe(downloadStatus: string, transcriptionStatus: string): boolean {
+    return downloadStatus === "downloaded" && transcriptionStatus !== "transcribing";
+  }
+
+  function needsDownload(downloadStatus: string): boolean {
+    return downloadStatus === "not_downloaded" || downloadStatus === "download_error" || downloadStatus === "extraction_error";
+  }
+
+  function needsTranscription(downloadStatus: string, transcriptionStatus: string): boolean {
+    return downloadStatus === "downloaded" && (transcriptionStatus === "not_transcribed" || transcriptionStatus === "transcription_failed");
   }
 
   async function reDownloadPodcast(audioFileId: number, event: Event) {
@@ -253,6 +273,40 @@
     } finally {
       reDownloadBtn.disabled = false;
       reDownloadBtn.textContent = originalText;
+    }
+  }
+
+  async function reTranscribePodcast(audioFileId: number, event: Event) {
+    event.stopPropagation();
+
+    const reTranscribeBtn = event.target as HTMLButtonElement;
+    const originalText = reTranscribeBtn.textContent || "";
+
+    try {
+      reTranscribeBtn.disabled = true;
+      reTranscribeBtn.textContent = "Re-transcribing...";
+
+      const response = await fetch(
+        `${API_BASE_URL}/audio-files/${audioFileId}/transcribe`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to re-transcribe podcast");
+      }
+
+      showStatus("Podcast re-transcription started successfully", "success");
+
+      // Reload the podcast list to show updated status
+      await loadPodcasts();
+    } catch (error) {
+      console.error("Error re-transcribing podcast:", error);
+      showStatus("Failed to re-transcribe podcast", "error");
+    } finally {
+      reTranscribeBtn.disabled = false;
+      reTranscribeBtn.textContent = originalText;
     }
   }
 
@@ -292,9 +346,13 @@
           const episode = file.episode_number
             ? `Episode ${file.episode_number}`
             : "";
-          const isAvailable = isPodcastAvailable(file.status);
-          const statusBadge = getStatusBadge(file.status);
-          const statusText = getStatusText(file.status);
+          const isAvailable = isPodcastAvailable(file.download_status);
+          const downloadStatusBadge = getStatusBadge(file.download_status);
+          const downloadStatusText = getStatusText(file.download_status);
+          const transcriptionStatusBadge = getStatusBadge(file.transcription_status);
+          const transcriptionStatusText = getStatusText(file.transcription_status);
+          const needsDownloadBtn = needsDownload(file.download_status);
+          const needsTranscriptionBtn = needsTranscription(file.download_status, file.transcription_status);
 
           return `
           <div 
@@ -315,17 +373,38 @@
                 <span>${fileSize}</span>
               </div>
               <div class="flex items-center space-x-2">
-                <span class="px-2 py-1 rounded-full text-xs ${statusBadge}">
-                  ${statusText}
+                <span class="px-2 py-1 rounded-full text-xs ${downloadStatusBadge}">
+                  ${downloadStatusText}
+                </span>
+                <span class="px-2 py-1 rounded-full text-xs ${transcriptionStatusBadge}">
+                  ${transcriptionStatusText}
                 </span>
                 ${
-                  !isAvailable
+                  needsDownloadBtn
                     ? `
                   <button 
                     onclick="reDownloadPodcast(${file.id}, event)"
                     class="px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   >
-                    Re-download
+                    Download
+                  </button>
+                `
+                    : needsTranscriptionBtn
+                    ? `
+                  <button 
+                    onclick="reTranscribePodcast(${file.id}, event)"
+                    class="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  >
+                    Transcribe
+                  </button>
+                `
+                    : file.transcription_status === "transcribed"
+                    ? `
+                  <button 
+                    onclick="reTranscribePodcast(${file.id}, event)"
+                    class="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  >
+                    Re-transcribe
                   </button>
                 `
                     : ""
@@ -345,7 +424,7 @@
           (f: any) => f.id.toString() === audioFileId
         );
 
-        if (audioFile && isPodcastAvailable(audioFile.status)) {
+        if (audioFile && isPodcastAvailable(audioFile.download_status)) {
           item.addEventListener("click", () => {
             if (filename) {
               selectPodcast(filename);
@@ -356,7 +435,7 @@
 
       // Auto-select first available podcast
       const firstAvailable = audioFiles.find((f: any) =>
-        isPodcastAvailable(f.status)
+        isPodcastAvailable(f.download_status)
       );
       if (firstAvailable && !selectedPodcast) {
         selectPodcast(firstAvailable.filename);
@@ -390,7 +469,7 @@
       `;
 
       const response = await fetch(
-        `${API_BASE_URL}/audio-files/check-all-status`,
+        `${API_BASE_URL}/audio-files/check-all-download-status`,
         {
           method: "POST",
         }
@@ -481,6 +560,7 @@
   // Make functions available globally
   (window as any).loadPodcasts = loadPodcasts;
   (window as any).reDownloadPodcast = reDownloadPodcast;
+  (window as any).reTranscribePodcast = reTranscribePodcast;
 </script>
 
 <style>

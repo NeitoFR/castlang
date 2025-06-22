@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.routes import router
-from src.database import create_tables
+from src.database import create_tables, migrate_existing_records
 from src.models import Base
 import os
 from dotenv import load_dotenv
@@ -37,6 +37,12 @@ app.include_router(router, prefix="/api/v1")
 async def startup_event():
     # Create database tables
     create_tables()
+    
+    # Migrate existing records to new schema
+    try:
+        migrate_existing_records()
+    except Exception as e:
+        print(f"Warning: Could not migrate existing records: {e}")
 
 if __name__ == "__main__":
     import uvicorn

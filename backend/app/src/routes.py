@@ -7,19 +7,22 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import OperationalError
 from src.models import (
     YouTubeURL, AudioResponse, HealthResponse, AudioFile, AudioFileWithTranscriptions,
-    TranscriptionRequest, TranscriptionResponse, TranscriptionStatusResponse, Transcription
+    TranscriptionRequest, TranscriptionResponse, TranscriptionStatusResponse, Transcription,
+    AudioFileDB
 )
 from src.services import (
     download_audio, 
     get_downloaded_audio_files, 
     get_audio_file_by_id,
     get_audio_file_by_filename,
-    update_audio_file_status,
+    update_audio_file_download_status,
+    update_audio_file_transcription_status,
+    update_available_languages,
     delete_audio_file,
     get_audio_files_by_series,
-    check_all_audio_files_status,
+    check_all_audio_files_download_status,
     re_download_audio,
-    update_audio_file_status_from_disk,
+    update_audio_file_download_status_from_disk,
     transcribe_audio_file,
     get_transcriptions_for_audio_file,
     get_transcriptions_by_language,
@@ -75,6 +78,20 @@ async def list_audio_files(db: Session = Depends(get_db)):
         logger.error(f"Error listing audio files: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/audio-files/all", response_model=List[AudioFile])
+async def list_all_audio_files(db: Session = Depends(get_db)):
+    """Get all audio files regardless of status (downloaded, transcribing, transcribed, etc.)"""
+    try:
+        check_database_connection()
+        # Get all audio files without status filtering
+        db_audio_files = db.query(AudioFileDB).all()
+        return [AudioFile.from_orm(audio_file) for audio_file in db_audio_files]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error listing all audio files: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/audio-files/{audio_file_id}", response_model=AudioFile)
 async def get_audio_file(audio_file_id: int, db: Session = Depends(get_db)):
     try:
@@ -100,18 +117,46 @@ async def get_audio_files_by_series_name(series_name: str, db: Session = Depends
         logger.error(f"Error getting audio files for series {series_name}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.put("/audio-files/{audio_file_id}/status")
-async def update_status(audio_file_id: int, status: str, db: Session = Depends(get_db)):
+@router.put("/audio-files/{audio_file_id}/download-status")
+async def update_download_status(audio_file_id: int, status: str, db: Session = Depends(get_db)):
     try:
         check_database_connection()
-        audio_file = update_audio_file_status(db, audio_file_id, status)
+        audio_file = update_audio_file_download_status(db, audio_file_id, status)
         if not audio_file:
             raise HTTPException(status_code=404, detail="Audio file not found")
-        return {"message": "Status updated successfully", "audio_file": audio_file}
+        return {"message": "Download status updated successfully", "audio_file": audio_file}
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error updating status for audio file {audio_file_id}: {e}")
+        logger.error(f"Error updating download status for audio file {audio_file_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/audio-files/{audio_file_id}/transcription-status")
+async def update_transcription_status(audio_file_id: int, status: str, db: Session = Depends(get_db)):
+    try:
+        check_database_connection()
+        audio_file = update_audio_file_transcription_status(db, audio_file_id, status)
+        if not audio_file:
+            raise HTTPException(status_code=404, detail="Audio file not found")
+        return {"message": "Transcription status updated successfully", "audio_file": audio_file}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating transcription status for audio file {audio_file_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/audio-files/{audio_file_id}/available-languages")
+async def update_languages(audio_file_id: int, languages: List[str], db: Session = Depends(get_db)):
+    try:
+        check_database_connection()
+        audio_file = update_available_languages(db, audio_file_id, languages)
+        if not audio_file:
+            raise HTTPException(status_code=404, detail="Audio file not found")
+        return {"message": "Available languages updated successfully", "audio_file": audio_file}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating available languages for audio file {audio_file_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/audio-files/{audio_file_id}")
@@ -128,32 +173,32 @@ async def remove_audio_file(audio_file_id: int, db: Session = Depends(get_db)):
         logger.error(f"Error deleting audio file {audio_file_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/audio-files/{audio_file_id}/check-status")
-async def check_audio_file_status(audio_file_id: int, db: Session = Depends(get_db)):
-    """Check and update the status of a specific audio file."""
+@router.post("/audio-files/{audio_file_id}/check-download-status")
+async def check_audio_file_download_status(audio_file_id: int, db: Session = Depends(get_db)):
+    """Check and update the download status of a specific audio file."""
     try:
         check_database_connection()
-        audio_file = update_audio_file_status_from_disk(db, audio_file_id)
+        audio_file = update_audio_file_download_status_from_disk(db, audio_file_id)
         if not audio_file:
             raise HTTPException(status_code=404, detail="Audio file not found")
-        return {"message": "Status checked successfully", "audio_file": audio_file}
+        return {"message": "Download status checked successfully", "audio_file": audio_file}
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error checking status for audio file {audio_file_id}: {e}")
+        logger.error(f"Error checking download status for audio file {audio_file_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/audio-files/check-all-status")
-async def check_all_audio_files_status_endpoint(db: Session = Depends(get_db)):
-    """Check and update the status of all audio files."""
+@router.post("/audio-files/check-all-download-status")
+async def check_all_audio_files_download_status_endpoint(db: Session = Depends(get_db)):
+    """Check and update the download status of all audio files."""
     try:
         check_database_connection()
-        audio_files = check_all_audio_files_status(db)
-        return {"message": "All statuses checked successfully", "audio_files": audio_files}
+        audio_files = check_all_audio_files_download_status(db)
+        return {"message": "All download statuses checked successfully", "audio_files": audio_files}
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error checking all audio files status: {e}")
+        logger.error(f"Error checking all audio files download status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/audio-files/{audio_file_id}/re-download")
@@ -181,16 +226,22 @@ async def start_transcription(audio_file_id: int, db: Session = Depends(get_db))
     try:
         check_database_connection()
         
-        # Check if audio file exists and is downloaded
+        # Check if audio file exists
         audio_file = get_audio_file_by_id(db, audio_file_id)
         if not audio_file:
             raise HTTPException(status_code=404, detail="Audio file not found")
         
-        if audio_file.status != 'downloaded':
+        # Allow transcription for downloaded or already transcribed files
+        if audio_file.status not in ['downloaded', 'transcribed']:
             raise HTTPException(
                 status_code=400, 
-                detail=f"Audio file must be downloaded before transcription. Current status: {audio_file.status}"
+                detail=f"Audio file must be downloaded or transcribed to re-transcribe. Current status: {audio_file.status}"
             )
+        
+        # If already transcribed, delete existing transcriptions first
+        if audio_file.status == 'transcribed':
+            logger.info(f"Deleting existing transcriptions for audio file {audio_file_id} before re-transcription")
+            delete_transcriptions_for_audio_file(audio_file_id, db)
         
         # Start transcription
         result = transcribe_audio_file(audio_file_id, db)

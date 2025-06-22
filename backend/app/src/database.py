@@ -4,6 +4,7 @@ import os
 import time
 from dotenv import load_dotenv
 from src.models import Base
+from sqlalchemy.exc import OperationalError
 
 # Load environment variables from .env file
 load_dotenv()
@@ -59,7 +60,7 @@ def wait_for_database(max_retries=30, retry_interval=2):
                 connection.execute(text("SELECT 1"))
                 connection.commit()
             return True
-        except Exception as e:
+        except OperationalError:
             if attempt < max_retries - 1:
                 time.sleep(retry_interval)
             else:
@@ -68,4 +69,76 @@ def wait_for_database(max_retries=30, retry_interval=2):
 
 # Create all tables
 def create_tables():
-    Base.metadata.create_all(bind=engine) 
+    Base.metadata.create_all(bind=engine)
+
+def migrate_existing_records():
+    """Migrate existing records to have the new status fields."""
+    try:
+        with engine.connect() as connection:
+            # Check if the new columns exist
+            result = connection.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'audio_files' 
+                AND column_name IN ('download_status', 'transcription_status', 'available_languages')
+            """))
+            existing_columns = [row[0] for row in result.fetchall()]
+            
+            # If new columns don't exist, we need to run the migration first
+            if not all(col in existing_columns for col in ['download_status', 'transcription_status', 'available_languages']):
+                print("New columns don't exist yet. Please run the alembic migration first.")
+                return False
+            
+            # Check if the old status column exists
+            result = connection.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'audio_files' 
+                AND column_name = 'status'
+            """))
+            has_old_status = result.fetchone() is not None
+            
+            if has_old_status:
+                # Update existing records that have the old status field but not the new ones
+                connection.execute(text("""
+                    UPDATE audio_files 
+                    SET download_status = CASE 
+                        WHEN status IN ('downloaded', 'downloading', 'download_failed', 'file_missing', 'not_downloaded') 
+                        THEN status 
+                        ELSE 'downloaded'
+                    END,
+                    transcription_status = CASE 
+                        WHEN status IN ('transcribed', 'transcribing', 'transcription_failed') 
+                        THEN status 
+                        ELSE 'not_transcribed'
+                    END,
+                    available_languages = '[]'::json
+                    WHERE download_status IS NULL OR transcription_status IS NULL OR available_languages IS NULL
+                """))
+            else:
+                # Database was created with new schema, just ensure all records have proper values
+                connection.execute(text("""
+                    UPDATE audio_files 
+                    SET download_status = 'not_downloaded'
+                    WHERE download_status IS NULL
+                """))
+                
+                connection.execute(text("""
+                    UPDATE audio_files 
+                    SET transcription_status = 'not_transcribed'
+                    WHERE transcription_status IS NULL
+                """))
+                
+                connection.execute(text("""
+                    UPDATE audio_files 
+                    SET available_languages = '[]'::json
+                    WHERE available_languages IS NULL
+                """))
+            
+            connection.commit()
+            print("Successfully migrated existing records")
+            return True
+            
+    except Exception as e:
+        print(f"Error migrating existing records: {e}")
+        return False 

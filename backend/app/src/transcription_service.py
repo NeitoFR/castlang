@@ -7,6 +7,7 @@ from src.models import AudioFileDB, TranscriptionDB
 from src.database import get_db
 from dotenv import load_dotenv
 import logging
+import json
 
 # Load environment variables
 load_dotenv()
@@ -114,7 +115,7 @@ class TranscriptionService:
                 json=data
             )
             
-            if response.status_code != 200:
+            if response.status_code not in [200, 201]:
                 logger.error(f"Transcription request failed: {response.status_code} - {response.text}")
                 raise Exception(f"Transcription request failed: {response.status_code} - {response.text}")
             
@@ -223,97 +224,88 @@ class TranscriptionService:
             raise
     
     def _save_transcriptions_to_db(self, api_result: Dict[str, Any], audio_file_id: int, db: Session) -> List[TranscriptionDB]:
-        """Save transcription results and translations to database."""
+        """Save transcription results and translations to database using SRT subtitles."""
         transcriptions = []
         
         try:
+            # Log only essential info for debugging
+            logger.info(f"Processing API result with keys: {list(api_result.keys())}")
+            
             # Extract transcription data from API response
-            # The structure depends on the Gladia API response format
             if 'result' in api_result:
                 result_data = api_result['result']
                 
-                # Handle different possible response structures
-                if 'prediction' in result_data:
-                    # New API format
-                    segments = result_data['prediction'].get('segments', [])
-                elif 'segments' in result_data:
-                    # Alternative format
-                    segments = result_data['segments']
-                else:
-                    # Fallback: try to find segments in the result
-                    segments = result_data.get('segments', [])
+                # Handle the actual Gladia API structure
+                if 'transcription' in result_data:
+                    # Get SRT subtitles from transcription
+                    subtitles = result_data['transcription'].get('subtitles', [])
+                    logger.info(f"Found {len(subtitles)} subtitle formats in transcription")
+                    
+                    # Find SRT format
+                    srt_subtitles = None
+                    for subtitle in subtitles:
+                        if subtitle.get('format') == 'srt':
+                            srt_subtitles = subtitle.get('subtitles', '')
+                            break
+                    
+                    if srt_subtitles:
+                        logger.info("Processing SRT subtitles for transcription")
+                        segments = self._parse_srt_subtitles(srt_subtitles, 'ja', 'transcription')
+                        
+                        for i, segment in enumerate(segments):
+                            transcription = TranscriptionDB(
+                                audio_file_id=audio_file_id,
+                                language=segment['language'],
+                                content_type=segment['content_type'],
+                                content=segment['content'],
+                                start_time_seconds=segment['start_time'],
+                                end_time_seconds=segment['end_time'],
+                                segment_order=i + 1
+                            )
+                            db.add(transcription)
+                            transcriptions.append(transcription)
                 
-                for i, segment in enumerate(segments):
-                    # Get the transcription text
-                    transcription_text = segment.get('transcription', '')
-                    if not transcription_text.strip():
-                        continue
+                # Handle translations using SRT subtitles
+                if 'translation' in result_data and result_data['translation'].get('success', False):
+                    translation_results = result_data['translation'].get('results', [])
+                    logger.info(f"Found {len(translation_results)} translation results")
                     
-                    # Get timing information
-                    start_time = segment.get('start', 0.0)
-                    end_time = segment.get('end', 0.0)
-                    
-                    # Get confidence score if available
-                    confidence = segment.get('confidence', None)
-                    
-                    # Detect language (default to Japanese for this use case)
-                    detected_language = segment.get('language', 'ja')
-                    
-                    # Create transcription record
-                    transcription = TranscriptionDB(
-                        audio_file_id=audio_file_id,
-                        language=detected_language,
-                        content_type='transcription',
-                        content=transcription_text,
-                        confidence_score=confidence,
-                        start_time_seconds=start_time,
-                        end_time_seconds=end_time,
-                        segment_order=i + 1
-                    )
-                    
-                    db.add(transcription)
-                    transcriptions.append(transcription)
-                    
-                    # Handle translations if available
-                    translations = segment.get('translations', {})
-                    
-                    # Save English translation
-                    if 'en' in translations:
-                        en_translation = translations['en']
-                        if en_translation.strip():
-                            en_transcription = TranscriptionDB(
-                                audio_file_id=audio_file_id,
-                                language='en',
-                                content_type='translation',
-                                content=en_translation,
-                                confidence_score=confidence,
-                                start_time_seconds=start_time,
-                                end_time_seconds=end_time,
-                                segment_order=i + 1
-                            )
-                            db.add(en_transcription)
-                            transcriptions.append(en_transcription)
-                    
-                    # Save French translation
-                    if 'fr' in translations:
-                        fr_translation = translations['fr']
-                        if fr_translation.strip():
-                            fr_transcription = TranscriptionDB(
-                                audio_file_id=audio_file_id,
-                                language='fr',
-                                content_type='translation',
-                                content=fr_translation,
-                                confidence_score=confidence,
-                                start_time_seconds=start_time,
-                                end_time_seconds=end_time,
-                                segment_order=i + 1
-                            )
-                            db.add(fr_transcription)
-                            transcriptions.append(fr_transcription)
+                    for translation_result in translation_results:
+                        languages = translation_result.get('languages', [])
+                        subtitles = translation_result.get('subtitles', [])
+                        
+                        for lang in languages:
+                            if lang in ['en', 'fr']:  # Only process English and French
+                                # Find SRT format for this language
+                                srt_subtitles = None
+                                for subtitle in subtitles:
+                                    if subtitle.get('format') == 'srt':
+                                        srt_subtitles = subtitle.get('subtitles', '')
+                                        break
+                                
+                                if srt_subtitles:
+                                    logger.info(f"Processing SRT subtitles for {lang} translation")
+                                    segments = self._parse_srt_subtitles(srt_subtitles, lang, 'translation')
+                                    
+                                    for i, segment in enumerate(segments):
+                                        translation = TranscriptionDB(
+                                            audio_file_id=audio_file_id,
+                                            language=segment['language'],
+                                            content_type=segment['content_type'],
+                                            content=segment['content'],
+                                            start_time_seconds=segment['start_time'],
+                                            end_time_seconds=segment['end_time'],
+                                            segment_order=i + 1
+                                        )
+                                        db.add(translation)
+                                        transcriptions.append(translation)
                 
                 # Commit all transcriptions and translations
                 db.commit()
                 logger.info(f"Saved {len(transcriptions)} transcription and translation segments to database")
+                
+            else:
+                logger.error("No 'result' key found in API response")
                 
         except Exception as e:
             logger.error(f"Error saving transcriptions to database: {e}")
@@ -321,6 +313,64 @@ class TranscriptionService:
             raise
         
         return transcriptions
+    
+    def _parse_srt_subtitles(self, srt_content: str, language: str, content_type: str) -> List[Dict[str, Any]]:
+        """Parse SRT subtitle content into segments."""
+        segments = []
+        
+        try:
+            # Split SRT content into individual subtitle blocks
+            subtitle_blocks = srt_content.strip().split('\n\n')
+            
+            for block in subtitle_blocks:
+                lines = block.strip().split('\n')
+                if len(lines) >= 3:  # Valid SRT block has: number, timestamp, text
+                    try:
+                        # Parse timestamp line (format: "00:00:01.916 --> 00:00:06.139")
+                        timestamp_line = lines[1]
+                        start_time_str, end_time_str = timestamp_line.split(' --> ')
+                        
+                        # Convert timestamp to seconds
+                        start_time = self._timestamp_to_seconds(start_time_str)
+                        end_time = self._timestamp_to_seconds(end_time_str)
+                        
+                        # Get text content (all lines after timestamp)
+                        text_content = ' '.join(lines[2:]).strip()
+                        
+                        if text_content:  # Only add if there's actual content
+                            segments.append({
+                                'language': language,
+                                'content_type': content_type,
+                                'content': text_content,
+                                'start_time': start_time,
+                                'end_time': end_time
+                            })
+                    
+                    except (ValueError, IndexError) as e:
+                        logger.warning(f"Failed to parse SRT block: {e}")
+                        continue
+            
+            logger.info(f"Parsed {len(segments)} segments from SRT content")
+            
+        except Exception as e:
+            logger.error(f"Error parsing SRT content: {e}")
+        
+        return segments
+    
+    def _timestamp_to_seconds(self, timestamp: str) -> float:
+        """Convert SRT timestamp (HH:MM:SS,mmm) to seconds."""
+        try:
+            # Remove milliseconds separator and convert
+            time_part, ms_part = timestamp.replace(',', '.').split('.')
+            hours, minutes, seconds = map(int, time_part.split(':'))
+            milliseconds = int(ms_part) if len(ms_part) == 3 else int(ms_part + '0' * (3 - len(ms_part)))
+            
+            total_seconds = hours * 3600 + minutes * 60 + seconds + milliseconds / 1000.0
+            return total_seconds
+            
+        except Exception as e:
+            logger.warning(f"Failed to parse timestamp {timestamp}: {e}")
+            return 0.0
     
     def get_transcriptions_for_audio_file(self, audio_file_id: int, db: Session) -> List[TranscriptionDB]:
         """Get all transcriptions for an audio file."""

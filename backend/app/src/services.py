@@ -35,38 +35,38 @@ def check_file_exists(file_path: str) -> bool:
     """Check if the audio file exists on disk."""
     return Path(file_path).exists() and Path(file_path).is_file()
 
-def update_audio_file_status_from_disk(db: Session, audio_file_id: int) -> Optional[AudioFile]:
-    """Update audio file status based on whether the file exists on disk."""
+def update_audio_file_download_status_from_disk(db: Session, audio_file_id: int) -> Optional[AudioFile]:
+    """Update audio file download status based on whether the file exists on disk."""
     db_audio_file = db.query(AudioFileDB).filter(AudioFileDB.id == audio_file_id).first()
     if db_audio_file:
         file_exists = check_file_exists(db_audio_file.file_path)
         
-        # Only update status if it's not in a transcription-related state
-        if db_audio_file.status not in ['transcribing', 'transcribed', 'transcription_failed']:
-            new_status = 'downloaded' if file_exists else 'file_missing'
+        # Only update download status if it's not in a downloading state
+        if db_audio_file.download_status not in ['downloading']:
+            new_status = 'downloaded' if file_exists else 'not_downloaded'
             
-            if db_audio_file.status != new_status:
-                db_audio_file.status = new_status
+            if db_audio_file.download_status != new_status:
+                db_audio_file.download_status = new_status
                 db.commit()
                 db.refresh(db_audio_file)
         
         return AudioFile.from_orm(db_audio_file)
     return None
 
-def check_all_audio_files_status(db: Session) -> List[AudioFile]:
-    """Check and update status of all audio files based on disk presence."""
+def check_all_audio_files_download_status(db: Session) -> List[AudioFile]:
+    """Check and update download status of all audio files based on disk presence."""
     db_audio_files = db.query(AudioFileDB).all()
     updated_files = []
     
     for db_audio_file in db_audio_files:
         file_exists = check_file_exists(db_audio_file.file_path)
         
-        # Only update status if it's not in a transcription-related state
-        if db_audio_file.status not in ['transcribing', 'transcribed', 'transcription_failed']:
-            new_status = 'downloaded' if file_exists else 'file_missing'
+        # Only update download status if it's not in a downloading state
+        if db_audio_file.download_status not in ['downloading']:
+            new_status = 'downloaded' if file_exists else 'not_downloaded'
             
-            if db_audio_file.status != new_status:
-                db_audio_file.status = new_status
+            if db_audio_file.download_status != new_status:
+                db_audio_file.download_status = new_status
         
         updated_files.append(AudioFile.from_orm(db_audio_file))
     
@@ -81,7 +81,7 @@ def re_download_audio(audio_file_id: int, db: Session) -> Optional[AudioFile]:
     
     try:
         # Update status to downloading
-        db_audio_file.status = 'downloading'
+        db_audio_file.download_status = 'downloading'
         db.commit()
         
         # Download the audio file and update the existing record
@@ -92,7 +92,7 @@ def re_download_audio(audio_file_id: int, db: Session) -> Optional[AudioFile]:
         
     except Exception as e:
         # Update status to failed
-        db_audio_file.status = 'download_failed'
+        db_audio_file.download_status = 'download_error'
         db.commit()
         raise e
     
@@ -112,59 +112,68 @@ def download_audio(url: str, db: Session, existing_audio_file: Optional[AudioFil
             'outtmpl': os.path.join(temp_dir, '%(title)s.%(ext)s'),
         }
 
-        # Download and extract audio
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            audio_file = list(Path(temp_dir).glob("*.mp3"))[0]
-            
-            # Create a sanitized filename for the downloads folder
-            safe_filename = sanitize_filename(info.get("title", "audio"))
-            destination_path = DOWNLOADS_DIR / f"{safe_filename}.mp3"
-            
-            # Copy the file to the downloads directory
-            with open(audio_file, "rb") as src, open(destination_path, "wb") as dst:
-                dst.write(src.read())
+        try:
+            # Download and extract audio
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                audio_file = list(Path(temp_dir).glob("*.mp3"))[0]
+                
+                # Create a sanitized filename for the downloads folder
+                safe_filename = sanitize_filename(info.get("title", "audio"))
+                destination_path = DOWNLOADS_DIR / f"{safe_filename}.mp3"
+                
+                # Copy the file to the downloads directory
+                with open(audio_file, "rb") as src, open(destination_path, "wb") as dst:
+                    dst.write(src.read())
 
-            # Get file size
-            file_size = destination_path.stat().st_size
-            
+                # Get file size
+                file_size = destination_path.stat().st_size
+                
+                if existing_audio_file:
+                    # Update existing record
+                    existing_audio_file.filename = f"{safe_filename}.mp3"
+                    existing_audio_file.title = info.get("title")
+                    existing_audio_file.episode_number = info.get("episode_number")
+                    existing_audio_file.series_name = info.get("series")
+                    existing_audio_file.duration_seconds = info.get("duration")
+                    existing_audio_file.file_size_bytes = file_size
+                    existing_audio_file.file_path = str(destination_path)
+                    existing_audio_file.download_status = 'downloaded'
+                    
+                    db.commit()
+                    db.refresh(existing_audio_file)
+                    return AudioFile.from_orm(existing_audio_file)
+                else:
+                    # Create new database record
+                    db_audio_file = AudioFileDB(
+                        filename=f"{safe_filename}.mp3",
+                        original_url=url,
+                        title=info.get("title"),
+                        episode_number=info.get("episode_number"),
+                        series_name=info.get("series"),
+                        duration_seconds=info.get("duration"),
+                        file_size_bytes=file_size,
+                        file_path=str(destination_path),
+                        download_status='downloaded',
+                        transcription_status='not_transcribed',
+                        available_languages=[]
+                    )
+                    
+                    db.add(db_audio_file)
+                    db.commit()
+                    db.refresh(db_audio_file)
+
+                    return AudioFile.from_orm(db_audio_file)
+                    
+        except Exception as e:
             if existing_audio_file:
-                # Update existing record
-                existing_audio_file.filename = f"{safe_filename}.mp3"
-                existing_audio_file.title = info.get("title")
-                existing_audio_file.episode_number = info.get("episode_number")
-                existing_audio_file.series_name = info.get("series")
-                existing_audio_file.duration_seconds = info.get("duration")
-                existing_audio_file.file_size_bytes = file_size
-                existing_audio_file.file_path = str(destination_path)
-                existing_audio_file.status = 'downloaded'
-                
+                existing_audio_file.download_status = 'extraction_error'
                 db.commit()
-                db.refresh(existing_audio_file)
-                return AudioFile.from_orm(existing_audio_file)
-            else:
-                # Create new database record
-                db_audio_file = AudioFileDB(
-                    filename=f"{safe_filename}.mp3",
-                    original_url=url,
-                    title=info.get("title"),
-                    episode_number=info.get("episode_number"),
-                    series_name=info.get("series"),
-                    duration_seconds=info.get("duration"),
-                    file_size_bytes=file_size,
-                    file_path=str(destination_path),
-                    status='downloaded'
-                )
-                
-                db.add(db_audio_file)
-                db.commit()
-                db.refresh(db_audio_file)
-
-                return AudioFile.from_orm(db_audio_file)
+            raise e
 
 def get_downloaded_audio_files(db: Session) -> List[AudioFile]:
     # First check and update all file statuses
-    check_all_audio_files_status(db)
+    check_all_audio_files_download_status(db)
     
     # Then return the updated list
     db_audio_files = db.query(AudioFileDB).all()
@@ -172,7 +181,7 @@ def get_downloaded_audio_files(db: Session) -> List[AudioFile]:
 
 def get_audio_file_by_id(db: Session, audio_file_id: int) -> Optional[AudioFile]:
     # Check and update status before returning
-    updated_file = update_audio_file_status_from_disk(db, audio_file_id)
+    updated_file = update_audio_file_download_status_from_disk(db, audio_file_id)
     if updated_file:
         return updated_file
     
@@ -185,14 +194,32 @@ def get_audio_file_by_filename(db: Session, filename: str) -> Optional[AudioFile
     db_audio_file = db.query(AudioFileDB).filter(AudioFileDB.filename == filename).first()
     if db_audio_file:
         # Check and update status
-        update_audio_file_status_from_disk(db, db_audio_file.id)
+        update_audio_file_download_status_from_disk(db, db_audio_file.id)
         return AudioFile.from_orm(db_audio_file)
     return None
 
-def update_audio_file_status(db: Session, audio_file_id: int, status: str) -> Optional[AudioFile]:
+def update_audio_file_download_status(db: Session, audio_file_id: int, status: str) -> Optional[AudioFile]:
     db_audio_file = db.query(AudioFileDB).filter(AudioFileDB.id == audio_file_id).first()
     if db_audio_file:
-        db_audio_file.status = status
+        db_audio_file.download_status = status
+        db.commit()
+        db.refresh(db_audio_file)
+        return AudioFile.from_orm(db_audio_file)
+    return None
+
+def update_audio_file_transcription_status(db: Session, audio_file_id: int, status: str) -> Optional[AudioFile]:
+    db_audio_file = db.query(AudioFileDB).filter(AudioFileDB.id == audio_file_id).first()
+    if db_audio_file:
+        db_audio_file.transcription_status = status
+        db.commit()
+        db.refresh(db_audio_file)
+        return AudioFile.from_orm(db_audio_file)
+    return None
+
+def update_available_languages(db: Session, audio_file_id: int, languages: List[str]) -> Optional[AudioFile]:
+    db_audio_file = db.query(AudioFileDB).filter(AudioFileDB.id == audio_file_id).first()
+    if db_audio_file:
+        db_audio_file.available_languages = languages
         db.commit()
         db.refresh(db_audio_file)
         return AudioFile.from_orm(db_audio_file)
@@ -214,7 +241,7 @@ def delete_audio_file(db: Session, audio_file_id: int) -> bool:
 
 def get_audio_files_by_series(db: Session, series_name: str) -> List[AudioFile]:
     # Check and update all file statuses first
-    check_all_audio_files_status(db)
+    check_all_audio_files_download_status(db)
     
     db_audio_files = db.query(AudioFileDB).filter(AudioFileDB.series_name == series_name).order_by(AudioFileDB.episode_number).all()
     return [AudioFile.from_orm(audio_file) for audio_file in db_audio_files]
@@ -227,7 +254,7 @@ def transcribe_audio_file(audio_file_id: int, db: Session) -> dict:
         return result
     except Exception as e:
         # Update status to failed if transcription fails
-        update_audio_file_status(db, audio_file_id, 'transcription_failed')
+        update_audio_file_transcription_status(db, audio_file_id, 'transcription_failed')
         raise e
 
 def get_transcriptions_for_audio_file(audio_file_id: int, db: Session) -> List[Transcription]:
@@ -272,7 +299,7 @@ def delete_transcriptions_for_audio_file(audio_file_id: int, db: Session) -> boo
     success = transcription_service.delete_transcriptions_for_audio_file(audio_file_id, db)
     if success:
         # Update audio file status back to downloaded
-        update_audio_file_status(db, audio_file_id, 'downloaded')
+        update_audio_file_download_status(db, audio_file_id, 'downloaded')
     return success
 
 def get_transcription_status(audio_file_id: int, db: Session) -> dict:
@@ -282,11 +309,13 @@ def get_transcription_status(audio_file_id: int, db: Session) -> dict:
         return {"error": "Audio file not found"}
     
     transcriptions_count = 0
-    if audio_file.status == 'transcribed':
+    if audio_file.transcription_status == 'transcribed':
         transcriptions_count = len(get_transcriptions_for_audio_file(audio_file_id, db))
     
     return {
         "audio_file_id": audio_file_id,
-        "status": audio_file.status,
+        "download_status": audio_file.download_status,
+        "transcription_status": audio_file.transcription_status,
+        "available_languages": audio_file.available_languages,
         "transcriptions_count": transcriptions_count
     } 
