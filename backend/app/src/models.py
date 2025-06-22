@@ -20,7 +20,7 @@ class AudioFileDB(Base):
     duration_seconds = Column(Integer)
     file_size_bytes = Column(BigInteger)
     file_path = Column(String(500), nullable=False)
-    status = Column(String(50), default='not_downloaded')
+    status = Column(String(50), default='not_downloaded')  # not_downloaded, downloaded, transcribing, transcribed, transcription_failed, file_missing, download_failed
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -57,6 +57,21 @@ class AudioResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
+
+class TranscriptionRequest(BaseModel):
+    audio_file_id: int
+
+class TranscriptionResponse(BaseModel):
+    status: str
+    message: str
+    audio_file_id: int
+    transcriptions_count: Optional[int] = None
+    error: Optional[str] = None
+
+class TranscriptionStatusResponse(BaseModel):
+    audio_file_id: int
+    status: str
+    transcriptions_count: Optional[int] = None
 
 class AudioFile(BaseModel):
     id: Optional[int] = None

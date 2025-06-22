@@ -37,6 +37,9 @@ AUDIO_QUALITY=192
 
 # Database Debugging (optional)
 DB_ECHO=false
+
+# Transcription Configuration
+GLADIA_API_KEY=your_gladia_api_key_here
 ```
 
 ## Database Setup
@@ -86,6 +89,15 @@ uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 - `GET /api/v1/stream/{filename}` - Stream audio file
 - `GET /api/v1/download/{filename}` - Download audio file
 
+### Transcription
+
+- `POST /api/v1/audio-files/{id}/transcribe` - Start transcription for an audio file
+- `GET /api/v1/audio-files/{id}/transcription-status` - Get transcription status
+- `GET /api/v1/audio-files/{id}/transcriptions` - Get all transcriptions
+- `GET /api/v1/audio-files/{id}/transcriptions/{language}` - Get transcriptions by language
+- `GET /api/v1/audio-files/{id}/with-transcriptions` - Get audio file with transcriptions
+- `DELETE /api/v1/audio-files/{id}/transcriptions` - Delete all transcriptions
+
 ### Health Check
 
 - `GET /api/v1/health` - Health check endpoint
@@ -105,7 +117,7 @@ The application uses two main tables:
 - `duration_seconds` - Audio duration
 - `file_size_bytes` - File size in bytes
 - `file_path` - Path to the audio file
-- `status` - Download status ('downloaded', 'not_downloaded')
+- `status` - Status ('not_downloaded', 'downloading', 'downloaded', 'transcribing', 'transcribed', 'transcription_failed', 'file_missing', 'download_failed')
 - `created_at` - Creation timestamp
 - `updated_at` - Last update timestamp
 
@@ -122,6 +134,35 @@ The application uses two main tables:
 - `segment_order` - Segment order within file
 - `created_at` - Creation timestamp
 - `updated_at` - Last update timestamp
+
+## Transcription Features
+
+The application now supports audio transcription using the Gladia API:
+
+- **Automatic Language Detection** - Detects the language of the audio content
+- **Speaker Diarization** - Identifies different speakers (configured for 1-3 speakers)
+- **Code Switching Support** - Handles mixed-language content
+- **Confidence Scores** - Provides confidence scores for transcription accuracy
+- **Time Stamps** - Includes start and end times for each transcription segment
+- **Segment Ordering** - Maintains proper order of transcription segments
+
+### Setting up Transcription
+
+1. Get a free API key from [Gladia.io](https://www.gladia.io/)
+2. Add the API key to your `.env` file:
+   ```env
+   GLADIA_API_KEY=your_gladia_api_key_here
+   ```
+3. Download an audio file using the extract-audio endpoint
+4. Start transcription using the transcribe endpoint
+
+### Testing Transcription
+
+Run the test script to verify transcription functionality:
+
+```bash
+python test_transcription.py
+```
 
 ## Development
 
@@ -148,22 +189,27 @@ API documentation will be available at `http://localhost:8000/docs`
 
 ## Environment Variables Reference
 
-| Variable        | Default          | Description                                          |
-| --------------- | ---------------- | ---------------------------------------------------- |
-| `DB_HOST`       | `localhost`      | Database host                                        |
-| `DB_PORT`       | `5432`           | Database port                                        |
-| `DB_NAME`       | `castlang`       | Database name                                        |
-| `DB_USER`       | `castlang`       | Database username                                    |
-| `DB_PASSWORD`   | `castlang`       | Database password                                    |
-| `DATABASE_URL`  | -                | Full database URL (overrides individual DB\_\* vars) |
-| `APP_TITLE`     | `CastLang API`   | Application title                                    |
-| `APP_VERSION`   | `1.0.0`          | Application version                                  |
-| `APP_HOST`      | `0.0.0.0`        | Application host                                     |
-| `APP_PORT`      | `8000`           | Application port                                     |
-| `DEBUG`         | `false`          | Debug mode                                           |
-| `CORS_ORIGINS`  | `*`              | CORS allowed origins (comma-separated)               |
-| `DOWNLOADS_DIR` | `downloads`      | Directory for downloaded files                       |
-| `AUDIO_FORMAT`  | `bestaudio/best` | yt-dlp audio format                                  |
-| `AUDIO_CODEC`   | `mp3`            | Audio codec                                          |
-| `AUDIO_QUALITY` | `192`            | Audio quality                                        |
-| `DB_ECHO`       | `false`          | SQL query logging                                    |
+| Variable         | Default          | Description                                          |
+| ---------------- | ---------------- | ---------------------------------------------------- |
+| `DB_HOST`        | `localhost`      | Database host                                        |
+| `DB_PORT`        | `5432`           | Database port                                        |
+| `DB_NAME`        | `castlang`       | Database name                                        |
+| `DB_USER`        | `castlang`       | Database username                                    |
+| `DB_PASSWORD`    | `castlang`       | Database password                                    |
+| `DATABASE_URL`   | -                | Full database URL (overrides individual DB\_\* vars) |
+| `APP_TITLE`      | `CastLang API`   | Application title                                    |
+| `APP_VERSION`    | `1.0.0`          | Application version                                  |
+| `APP_HOST`       | `0.0.0.0`        | Application host                                     |
+| `APP_PORT`       | `8000`           | Application port                                     |
+| `DEBUG`          | `false`          | Debug mode                                           |
+| `CORS_ORIGINS`   | `*`              | CORS allowed origins (comma-separated)               |
+| `DOWNLOADS_DIR`  | `downloads`      | Directory for downloaded files                       |
+| `AUDIO_FORMAT`   | `bestaudio/best` | yt-dlp audio format                                  |
+| `AUDIO_CODEC`    | `mp3`            | Audio codec                                          |
+| `AUDIO_QUALITY`  | `192`            | Audio quality                                        |
+| `DB_ECHO`        | `false`          | SQL query logging                                    |
+| `GLADIA_API_KEY` | -                | Gladia API key for transcription                     |
+
+## Documentation
+
+For detailed information about the transcription functionality, see [TRANSCRIPTION_README.md](TRANSCRIPTION_README.md).

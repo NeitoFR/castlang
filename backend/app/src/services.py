@@ -5,8 +5,9 @@ from pathlib import Path
 import re
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from src.models import AudioFile, AudioFileDB, TranscriptionDB
+from src.models import AudioFile, AudioFileDB, TranscriptionDB, Transcription
 from src.database import get_db
+from src.transcription_service import transcription_service
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -39,12 +40,15 @@ def update_audio_file_status_from_disk(db: Session, audio_file_id: int) -> Optio
     db_audio_file = db.query(AudioFileDB).filter(AudioFileDB.id == audio_file_id).first()
     if db_audio_file:
         file_exists = check_file_exists(db_audio_file.file_path)
-        new_status = 'downloaded' if file_exists else 'file_missing'
         
-        if db_audio_file.status != new_status:
-            db_audio_file.status = new_status
-            db.commit()
-            db.refresh(db_audio_file)
+        # Only update status if it's not in a transcription-related state
+        if db_audio_file.status not in ['transcribing', 'transcribed', 'transcription_failed']:
+            new_status = 'downloaded' if file_exists else 'file_missing'
+            
+            if db_audio_file.status != new_status:
+                db_audio_file.status = new_status
+                db.commit()
+                db.refresh(db_audio_file)
         
         return AudioFile.from_orm(db_audio_file)
     return None
@@ -56,10 +60,13 @@ def check_all_audio_files_status(db: Session) -> List[AudioFile]:
     
     for db_audio_file in db_audio_files:
         file_exists = check_file_exists(db_audio_file.file_path)
-        new_status = 'downloaded' if file_exists else 'file_missing'
         
-        if db_audio_file.status != new_status:
-            db_audio_file.status = new_status
+        # Only update status if it's not in a transcription-related state
+        if db_audio_file.status not in ['transcribing', 'transcribed', 'transcription_failed']:
+            new_status = 'downloaded' if file_exists else 'file_missing'
+            
+            if db_audio_file.status != new_status:
+                db_audio_file.status = new_status
         
         updated_files.append(AudioFile.from_orm(db_audio_file))
     
@@ -210,4 +217,67 @@ def get_audio_files_by_series(db: Session, series_name: str) -> List[AudioFile]:
     check_all_audio_files_status(db)
     
     db_audio_files = db.query(AudioFileDB).filter(AudioFileDB.series_name == series_name).order_by(AudioFileDB.episode_number).all()
-    return [AudioFile.from_orm(audio_file) for audio_file in db_audio_files] 
+    return [AudioFile.from_orm(audio_file) for audio_file in db_audio_files]
+
+# Transcription-related functions
+def transcribe_audio_file(audio_file_id: int, db: Session) -> dict:
+    """Transcribe an audio file using the transcription service."""
+    try:
+        result = transcription_service.transcribe_audio_file(audio_file_id, db)
+        return result
+    except Exception as e:
+        # Update status to failed if transcription fails
+        update_audio_file_status(db, audio_file_id, 'transcription_failed')
+        raise e
+
+def get_transcriptions_for_audio_file(audio_file_id: int, db: Session) -> List[Transcription]:
+    """Get all transcriptions for an audio file."""
+    db_transcriptions = transcription_service.get_transcriptions_for_audio_file(audio_file_id, db)
+    return [Transcription.from_orm(transcription) for transcription in db_transcriptions]
+
+def get_transcriptions_by_language(audio_file_id: int, language: str, db: Session) -> List[Transcription]:
+    """Get transcriptions for a specific language."""
+    db_transcriptions = transcription_service.get_transcriptions_by_language(audio_file_id, language, db)
+    return [Transcription.from_orm(transcription) for transcription in db_transcriptions]
+
+def get_audio_file_with_transcriptions(audio_file_id: int, db: Session) -> Optional[AudioFileWithTranscriptions]:
+    """Get an audio file with all its transcriptions."""
+    from src.models import AudioFileWithTranscriptions
+    
+    db_audio_file = db.query(AudioFileDB).filter(AudioFileDB.id == audio_file_id).first()
+    if not db_audio_file:
+        return None
+    
+    # Get transcriptions
+    transcriptions = get_transcriptions_for_audio_file(audio_file_id, db)
+    
+    # Create response object
+    audio_file_data = AudioFile.from_orm(db_audio_file)
+    return AudioFileWithTranscriptions(
+        **audio_file_data.dict(),
+        transcriptions=transcriptions
+    )
+
+def delete_transcriptions_for_audio_file(audio_file_id: int, db: Session) -> bool:
+    """Delete all transcriptions for an audio file."""
+    success = transcription_service.delete_transcriptions_for_audio_file(audio_file_id, db)
+    if success:
+        # Update audio file status back to downloaded
+        update_audio_file_status(db, audio_file_id, 'downloaded')
+    return success
+
+def get_transcription_status(audio_file_id: int, db: Session) -> dict:
+    """Get the transcription status for an audio file."""
+    audio_file = get_audio_file_by_id(db, audio_file_id)
+    if not audio_file:
+        return {"error": "Audio file not found"}
+    
+    transcriptions_count = 0
+    if audio_file.status == 'transcribed':
+        transcriptions_count = len(get_transcriptions_for_audio_file(audio_file_id, db))
+    
+    return {
+        "audio_file_id": audio_file_id,
+        "status": audio_file.status,
+        "transcriptions_count": transcriptions_count
+    } 
